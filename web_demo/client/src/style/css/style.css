@@ -1,0 +1,40 @@
+.hoverBehavior:hover {
+    background-color: #FFD050;
+    border: none;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+.bg-focus {
+    background-color: #FFD050;
+    border: none;
+    cursor: pointer;
+}
+
+.colorSmallBox{
+    background-color: #FBF6EA;
+}
+
+.savebutton:hover{
+    border: 1px solid black;
+    background-color: #cfcfcf;
+}
+
+.savebutton{
+    background-color: #999999;
+    border-radius: 0px;
+}
+
+.publishbutton{
+    background-color: #FFB800;
+    border-radius: 0px;
+}
+
+.publishbutton:hover{
+    border: 1px solid black;
+    background-color: #ffd467;
+}
+
+.register-bg{
+  background-color: #283232;
+}
