@@ -11,6 +11,8 @@ const tagRoutes = require("./routes/tagRoutes");
 const reactionRoutes = require("./routes/reactionRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const shareRoutes = require("./routes/shareRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
 
 const app = express();
 app.use(cors());
@@ -28,5 +30,7 @@ app.use("/api/reactions", reactionRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/shares", shareRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
 
 module.exports = app;
