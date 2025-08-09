@@ -1,21 +1,32 @@
 const mongoose = require("mongoose");
 
-const postSchema = new mongoose.Schema({
-  uid: { type: String, required: true, ref: "User" },
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  imageUrl: { type: String, default: "" },
-  category: { type: String, required: true },
-  tags: [{ type: String }],
-  createdAt: { type: Date, default: Date.now },
-});
-
-// Optional: enable full-text search
-postSchema.index({
-  title: "text",
-  description: "text",
-  category: "text",
-  tags: "text",
-});
+const postSchema = new mongoose.Schema(
+  {
+    uid: { type: String, required: true, ref: "User", index: true },
+    title: { type: String, required: true, trim: true, maxlength: 100 },
+    slug: { type: String, required: true, unique: true, index: true },
+    description: { type: String, required: true, maxlength: 500 },
+    content: { type: String, required: true },
+    imageUrl: { type: String, default: "" },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Category",
+      index: true,
+    },
+    tags: [{ type: String, index: true }],
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "draft",
+    },
+    views: { type: Number, default: 0 },
+    shares: { type: Number, default: 0 },
+    isDeleted: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Post", postSchema);
