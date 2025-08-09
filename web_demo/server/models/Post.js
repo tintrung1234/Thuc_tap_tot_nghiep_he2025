@@ -29,4 +29,7 @@ const postSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Add text index for search
+postSchema.index({ title: "text", content: "text" });
+
 module.exports = mongoose.model("Post", postSchema);
