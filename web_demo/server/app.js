@@ -8,6 +8,9 @@ const policyRoutes = require("./routes/policyRoutes");
 const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const tagRoutes = require("./routes/tagRoutes");
+const reactionRoutes = require("./routes/reactionRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const shareRoutes = require("./routes/shareRoutes");
 
 const app = express();
 app.use(cors());
@@ -21,5 +24,8 @@ app.use("/api/policy", policyRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/tags", tagRoutes);
+app.use("/api/reactions", reactionRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/shares", shareRoutes);
 
 module.exports = app;

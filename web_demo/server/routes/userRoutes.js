@@ -1,9 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
-const reactionController = require("../controllers/reactionController");
-const commentController = require("../controllers/commentController");
-const shareController = require("../controllers/shareController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const multer = require("multer");
 
@@ -34,8 +31,5 @@ router.get("/recent", authMiddleware, userController.getRecentUsers);
 router.get("/", authMiddleware, userController.getAllUsers);
 router.delete("/:uid", authMiddleware, userController.softDeleteUser);
 router.put("/:uid/restore", authMiddleware, userController.restoreUser);
-router.post("/reactions", authMiddleware, reactionController.addReaction);
-router.post("/comments", authMiddleware, commentController.addComment);
-router.post("/shares", authMiddleware, shareController.sharePost);
 
 module.exports = router;

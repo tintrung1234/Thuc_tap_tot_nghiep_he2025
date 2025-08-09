@@ -5,6 +5,7 @@ const Tag = require("../models/Tag");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
+const Share = require("../models/Share");
 const cloudinary = require("../config/cloudinary");
 
 class PostService {
@@ -17,7 +18,9 @@ class PostService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     const total = await Post.countDocuments({
       status: "published",
       isDeleted: false,
@@ -37,7 +40,9 @@ class PostService {
       .sort({ score: { $meta: "textScore" } })
       .skip(skip)
       .limit(limit)
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     const total = await Post.countDocuments({
       $text: { $search: query },
       status: "published",
@@ -65,7 +70,9 @@ class PostService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     const total = await Post.countDocuments({
       category: category._id,
       status: "published",
@@ -93,7 +100,9 @@ class PostService {
       .populate("uid", "username")
       .populate("tags", "name slug")
       .sort({ views: -1 })
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     if (!post) throw new Error("No posts found");
     return post;
   }
@@ -105,7 +114,9 @@ class PostService {
       .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     return posts;
   }
 
@@ -186,7 +197,9 @@ class PostService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("title slug description imageUrl category tags views createdAt");
+      .select(
+        "title slug description imageUrl category tags views shares createdAt"
+      );
     const total = await Post.countDocuments({ uid, isDeleted: false });
     return { posts, total, page, limit };
   }
@@ -256,6 +269,11 @@ class PostService {
 
     post.isDeleted = true;
     await post.save();
+
+    await Share.updateMany(
+      { postId: post._id, isDeleted: false },
+      { isDeleted: true }
+    );
 
     await AuditLog.logAction({
       userId: currentUser.uid,
