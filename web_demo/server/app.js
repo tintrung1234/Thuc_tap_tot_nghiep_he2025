@@ -27,5 +27,6 @@ app.use("/api/tags", tagRoutes);
 app.use("/api/reactions", reactionRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/shares", shareRoutes);
+app.use("/api/contacts", contactRoutes);
 
 module.exports = app;
