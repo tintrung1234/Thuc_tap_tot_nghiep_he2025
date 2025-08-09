@@ -14,7 +14,7 @@ const postSchema = new mongoose.Schema(
       ref: "Category",
       index: true,
     },
-    tags: [{ type: String, index: true }],
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag", index: true }],
     status: {
       type: String,
       enum: ["draft", "published", "archived"],

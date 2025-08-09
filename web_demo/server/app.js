@@ -7,6 +7,7 @@ const termsRoutes = require("./routes/termsRoutes");
 const policyRoutes = require("./routes/policyRoutes");
 const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
+const tagRoutes = require("./routes/tagRoutes");
 
 const app = express();
 app.use(cors());
@@ -19,5 +20,6 @@ app.use("/api/terms", termsRoutes);
 app.use("/api/policy", policyRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/tags", tagRoutes);
 
 module.exports = app;

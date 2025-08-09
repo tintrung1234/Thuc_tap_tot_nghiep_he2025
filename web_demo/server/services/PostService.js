@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Post = require("../models/Post");
 const Category = require("../models/Category");
+const Tag = require("../models/Tag");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
@@ -12,6 +13,7 @@ class PostService {
     const posts = await Post.find({ status: "published", isDeleted: false })
       .populate("category", "name slug")
       .populate("uid", "username")
+      .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -31,6 +33,7 @@ class PostService {
     )
       .populate("category", "name slug")
       .populate("uid", "username")
+      .populate("tags", "name slug")
       .sort({ score: { $meta: "textScore" } })
       .skip(skip)
       .limit(limit)
@@ -58,6 +61,7 @@ class PostService {
     })
       .populate("category", "name slug")
       .populate("uid", "username")
+      .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -77,7 +81,8 @@ class PostService {
       { new: true }
     )
       .populate("category", "name slug")
-      .populate("uid", "username");
+      .populate("uid", "username")
+      .populate("tags", "name slug");
     if (!post) throw new Error("Post not found");
     return post;
   }
@@ -86,6 +91,7 @@ class PostService {
     const post = await Post.findOne({ status: "published", isDeleted: false })
       .populate("category", "name slug")
       .populate("uid", "username")
+      .populate("tags", "name slug")
       .sort({ views: -1 })
       .select("title slug description imageUrl category tags views createdAt");
     if (!post) throw new Error("No posts found");
@@ -96,6 +102,7 @@ class PostService {
     const posts = await Post.find({ status: "published", isDeleted: false })
       .populate("category", "name slug")
       .populate("uid", "username")
+      .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .limit(limit)
       .select("title slug description imageUrl category tags views createdAt");
@@ -107,7 +114,7 @@ class PostService {
     description,
     content,
     categoryId,
-    tags,
+    tagIds,
     file,
     userId,
     username,
@@ -117,6 +124,10 @@ class PostService {
       isDeleted: false,
     });
     if (!category) throw new Error("Invalid or deleted category");
+
+    const tags = await Tag.find({ _id: { $in: tagIds }, isDeleted: false });
+    if (tags.length !== tagIds.length)
+      throw new Error("One or more tags are invalid or deleted");
 
     const slug = title
       .toLowerCase()
@@ -129,7 +140,7 @@ class PostService {
       description,
       content,
       category: categoryId,
-      tags,
+      tags: tagIds,
       status: "published",
     };
 
@@ -171,6 +182,7 @@ class PostService {
     const skip = (page - 1) * limit;
     const posts = await Post.find({ uid, isDeleted: false })
       .populate("category", "name slug")
+      .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -185,7 +197,7 @@ class PostService {
     description,
     content,
     categoryId,
-    tags,
+    tagIds,
     file,
     userId,
     currentUser,
@@ -207,7 +219,12 @@ class PostService {
       if (!category) throw new Error("Invalid or deleted category");
       post.category = categoryId;
     }
-    if (tags) post.tags = tags;
+    if (tagIds) {
+      const tags = await Tag.find({ _id: { $in: tagIds }, isDeleted: false });
+      if (tags.length !== tagIds.length)
+        throw new Error("One or more tags are invalid or deleted");
+      post.tags = tagIds;
+    }
 
     if (file) {
       const result = await cloudinary.uploader.upload(file.path, {
