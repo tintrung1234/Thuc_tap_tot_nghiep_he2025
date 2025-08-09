@@ -14,7 +14,7 @@ const upload = multer({
     cb(null, true);
   },
 });
-const firebaseAuth = require("../middlewares/firebaseAuth");
+
 const {
   getAllPosts,
   searchPosts,
@@ -51,7 +51,7 @@ router.get("/topblog", getTop1Blog);
 router.get("/newest", getPostsNewest);
 
 // Tạo bài viết
-router.post("/create", upload.single("image"), firebaseAuth, createPost);
+router.post("/create", upload.single("image"), createPost);
 
 // Lấy bài theo user
 router.get("/user/:uid", getPostsByUser);
@@ -59,7 +59,6 @@ router.get("/user/:uid", getPostsByUser);
 // Cập nhật bài viết theo user
 router.put(
   "/update/:id",
-  firebaseAuth,
   upload.single("image"),
   (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
@@ -72,6 +71,6 @@ router.put(
   updatePost
 );
 
-router.delete("/delete/:id", firebaseAuth, deletePost);
+router.delete("/delete/:id", deletePost);
 
 module.exports = router;
