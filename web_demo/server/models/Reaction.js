@@ -11,6 +11,7 @@ const reactionSchema = new mongoose.Schema(
     },
     isDeleted: { type: Boolean, default: false }, // Soft delete
     createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

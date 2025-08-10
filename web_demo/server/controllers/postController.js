@@ -65,10 +65,20 @@ const getTopPost = async (req, res) => {
   }
 };
 
+const getFeaturedPosts = async (req, res) => {
+  try {
+    const { limit } = req.query;
+    const posts = await PostService.getFeaturedPosts(parseInt(limit) || 5);
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getRecentPosts = async (req, res) => {
   try {
     const { limit } = req.query;
-    const posts = await PostService.getRecentPosts({ limit: parseInt(limit) });
+    const posts = await PostService.getRecentPosts(parseInt(limit) || 15);
     res.json(posts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -155,6 +165,7 @@ module.exports = {
   getPostsByCategory,
   getPostBySlug,
   getTopPost,
+  getFeaturedPosts,
   getRecentPosts,
   createPost: [upload.single("image"), createPost],
   getPostsByUser,

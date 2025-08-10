@@ -19,7 +19,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views shares createdAt"
       );
     const total = await Post.countDocuments({
       status: "published",
@@ -41,7 +41,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views shares createdAt"
       );
     const total = await Post.countDocuments({
       $text: { $search: query },
@@ -71,7 +71,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views shares createdAt"
       );
     const total = await Post.countDocuments({
       category: category._id,
@@ -101,13 +101,34 @@ class PostService {
       .populate("tags", "name slug")
       .sort({ views: -1 })
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views shares createdAt"
       );
     if (!post) throw new Error("No posts found");
     return post;
   }
 
-  static async getRecentPosts({ limit = 10 }) {
+  static async getFeaturedPosts(limit = 5) {
+    const posts = await Post.find({
+      status: "published",
+      isDeleted: false,
+    })
+      .populate("category", "name slug")
+      .populate("uid", "username")
+      .populate("tags", "name slug")
+      .sort({ shares: -1 })
+      .limit(limit)
+      .select(
+        "title slug content description imageUrl category tags views shares createdAt"
+      );
+
+    if (!posts || posts.length === 0) {
+      throw new Error("No featured posts found");
+    }
+
+    return posts;
+  }
+
+  static async getRecentPosts({ limit = 15 }) {
     const posts = await Post.find({ status: "published", isDeleted: false })
       .populate("category", "name slug")
       .populate("uid", "username")
@@ -115,8 +136,13 @@ class PostService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description content imageUrl category tags views shares createdAt"
       );
+
+    if (!posts || posts.length === 0) {
+      throw new Error("No recents posts found");
+    }
+
     return posts;
   }
 
@@ -198,7 +224,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views shares createdAt"
       );
     const total = await Post.countDocuments({ uid, isDeleted: false });
     return { posts, total, page, limit };

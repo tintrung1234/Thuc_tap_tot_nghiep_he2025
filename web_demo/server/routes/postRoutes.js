@@ -7,6 +7,7 @@ router.get("/", postController.getAllPosts);
 router.get("/search", postController.searchPosts);
 router.get("/category/:slug", postController.getPostsByCategory);
 router.get("/top", postController.getTopPost);
+router.get("/featured", postController.getFeaturedPosts);
 router.get("/recent", postController.getRecentPosts);
 router.get("/:slug", postController.getPostBySlug);
 router.post("/", authMiddleware, postController.createPost);

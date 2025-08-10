@@ -46,7 +46,9 @@ class UserService {
     const user = await User.findOne({ email, isDeleted: false }).select(
       "+password"
     );
-    if (!user) throw new Error("Invalid email or password");
+    if (!user) {
+      throw new Error("Invalid email or password");
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error("Invalid email or password");
@@ -118,7 +120,7 @@ class UserService {
   static async getRecentUsers() {
     return await User.find({ isDeleted: false })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(8)
       .select("uid username email photoUrl createdAt");
   }
 

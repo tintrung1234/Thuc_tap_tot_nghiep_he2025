@@ -20,6 +20,9 @@ const upload = multer({
 
 router.post("/register", userController.register);
 router.post("/login", userController.login);
+router.get("/recent", userController.getRecentUsers);
+router.get("/", authMiddleware, userController.getAllUsers);
+router.put("/:uid/restore", authMiddleware, userController.restoreUser);
 router.get("/:uid", authMiddleware, userController.getUser);
 router.put(
   "/:uid",
@@ -27,9 +30,6 @@ router.put(
   upload.single("photo"),
   userController.updateUser
 );
-router.get("/recent", authMiddleware, userController.getRecentUsers);
-router.get("/", authMiddleware, userController.getAllUsers);
 router.delete("/:uid", authMiddleware, userController.softDeleteUser);
-router.put("/:uid/restore", authMiddleware, userController.restoreUser);
 
 module.exports = router;

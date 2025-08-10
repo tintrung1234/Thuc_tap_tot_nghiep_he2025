@@ -30,10 +30,16 @@ const auditLogSchema = new mongoose.Schema(
         "Terms",
         "Policy",
         "Notification",
+        "Contact",
       ],
       index: true,
     },
-    resourceId: { type: String, required: true, index: true },
+    // resourceId: { type: String, required: true, index: true },
+    resourceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      index: true,
+    },
     details: { type: String, default: "" }, // Additional details about the action
     createdAt: { type: Date, default: Date.now },
   },
