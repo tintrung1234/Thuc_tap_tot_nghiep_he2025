@@ -1,40 +1,59 @@
-import bannerImg from "../assets/banner.png";
-import JoinSection from "../components/JoinSection";
-import CategoryList from "../components/CategoryList";
-import AuthorsList from "../components/AuthorsList";
-import "@fortawesome/fontawesome-free/css/all.min.css";
-import axios from "axios";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import BlogSkeleton from "../components/BlogSkeleton"; // Assuming Skeleton is available
-import AI_image from "../assets/AI_robot.png";
+import axios from "axios";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import TopPostSkeleton from "../components/TopPostSkeleton";
+import BlogSkeleton from "../components/BlogSkeleton";
+import JoinSection from "../components/JoinSection";
+import CategoryList from "../components/CategoryList";
+import AuthorsList from "../components/AuthorsList";
+import AI_image from "../assets/AI_robot.png";
+import bannerImg from "../assets/banner.png";
 
 function HomePage() {
   const [posts, setPosts] = useState([]);
+  const [featuredPosts, setFeaturedPosts] = useState([]);
   const [topPost, setTopPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [authorNames, setAuthorNames] = useState({});
 
-  // Fetch newest posts
+  // Fetch recent posts
   useEffect(() => {
-    const getAllPosts = async () => {
+    const getRecentPosts = async () => {
       setLoading(true);
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/posts/newest`
+          `http://localhost:5000/api/posts/recent`
         );
         setPosts(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài biết mới nhất!");
-        console.error("Error fetching newest posts:", error);
+        console.error("Error fetching recent posts:", error);
       } finally {
         setLoading(false);
       }
     };
-    getAllPosts();
+    getRecentPosts();
+  }, []);
+
+  // Fetch featured posts
+  useEffect(() => {
+    const getFeaturedPosts = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/posts/featured`
+        );
+        setFeaturedPosts(response.data);
+      } catch (error) {
+        toast.error("Không thể tải dữ liệu bài nổi bật!");
+        console.error("Error fetching featured posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getFeaturedPosts();
   }, []);
 
   // Fetch top post
@@ -42,10 +61,8 @@ function HomePage() {
     const getTopPost = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/topblog`
-        );
-        setTopPost(response.data); // Assuming single object from .findOne()
+        const response = await axios.get(`http://localhost:5000/api/posts/top`);
+        setTopPost(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài biết top 1!");
         console.error("Error fetching top blog:", error);
@@ -55,38 +72,6 @@ function HomePage() {
     };
     getTopPost();
   }, []);
-
-  const fetchUserName = async (uid) => {
-    if (!uid || authorNames[uid]) return; // Skip if no UID or already fetched
-
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/api/users/profile/${uid}`
-      );
-      setAuthorNames((prev) => ({
-        ...prev,
-        [uid]: response.data.username,
-      }));
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      toast.error("Không thể tải thông tin người dùng!");
-    }
-  };
-
-  // Log data for debugging
-  useEffect(() => {
-    if (topPost && topPost.uid) {
-      fetchUserName(topPost.uid);
-    }
-  }, [topPost]);
-
-  useEffect(() => {
-    posts.forEach((post) => {
-      if (post.uid) {
-        fetchUserName(post.uid);
-      }
-    });
-  }, [posts]);
 
   const handleDetailClick = (_id) => {
     navigate(`/detail/${encodeURIComponent(_id)}`);
@@ -127,7 +112,7 @@ function HomePage() {
       >
         <div className="flex">
           <h2 className="mr-1">POSTED ON</h2>
-          <h2 className="mr-1 font-bold">{topPost?.category || ""}</h2>
+          <h2 className="mr-1 font-bold">{topPost?.category.name || ""}</h2>
         </div>
 
         <h1 className="font-bold w-[60vw] text-[3vw] mb-3">
@@ -137,7 +122,7 @@ function HomePage() {
         <div className="flex text-lg mb-3">
           <h2 className="mr-1">BY</h2>
           <h2 className="mr-1 font-bold text-yellow-500">
-            <span>{authorNames[topPost?.uid] || "Tác giả không xác định"}</span>
+            <span>{topPost?.uid?.username || "Tác giả không xác định"}</span>
           </h2>
           <h2 className="mr-1">
             {" "}
@@ -164,7 +149,7 @@ function HomePage() {
 
       <div className="max-w-[80vw] mx-auto ">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Featured Post */}
+          {/* Featured Posts */}
           <div
             className="md:col-span-2 mb-5"
             data-aos="fade-right"
@@ -173,50 +158,52 @@ function HomePage() {
           >
             <h2 className="text-2xl font-bold mb-5">Bài viết nổi bật</h2>
 
-            {topPost && (
-              <div className="border p-4">
-                <img
-                  src={topPost.imageUrl}
-                  alt="Featured Post"
-                  className="w-full h-auto mb-4"
-                />
-                <div className="text-sm text-gray-600 mb-1">
-                  By{" "}
-                  <span className="text-indigo-600 font-medium">
-                    {authorNames[topPost?.uid] || "Tác giả không xác định"}
-                  </span>{" "}
-                  | {new Date(topPost.createdAt).toLocaleDateString("vi-VN")}
+            {featuredPosts && featuredPosts.length > 0 ? (
+              featuredPosts.map((post) => (
+                <div key={post._id} className="border p-4 mb-4">
+                  <img
+                    src={post.imageUrl}
+                    alt="Featured Post"
+                    className="w-full h-60 mb-4"
+                  />
+                  <div className="text-sm text-gray-600 mb-1">
+                    By{" "}
+                    <span className="text-indigo-600 font-medium">
+                      {post?.uid?.username || "Tác giả không xác định"}
+                    </span>{" "}
+                    | {new Date(post.createdAt).toLocaleDateString("vi-VN")}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{post?.title}</h3>
+                  <h2
+                    className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto mt-2 mb-4"
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        truncateDescription(post?.description || "", 200) || "",
+                    }}
+                  ></h2>
+                  <button
+                    className="bg-yellow-300 text-black px-4 py-2 font-semibold hover:bg-yellow-400"
+                    onClick={() => {
+                      handleDetailClick(post._id);
+                    }}
+                  >
+                    Xem thêm {">"}
+                  </button>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{topPost.title}</h3>
-                <h2
-                  className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto mt-2 mb-4"
-                  style={{ maxHeight: "50vh" }} // Fallback for older browsers
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      truncateDescription(topPost?.description || "", 200) ||
-                      "",
-                  }}
-                ></h2>
-                <button
-                  className="bg-yellow-300 text-black px-4 py-2 font-semibold hover:bg-yellow-400"
-                  onClick={() => {
-                    handleDetailClick(topPost._id);
-                  }}
-                >
-                  Xem thêm {">"}
-                </button>
-              </div>
+              ))
+            ) : (
+              <p>Không có bài viết nổi bật</p>
             )}
           </div>
 
-          {/* All Posts */}
+          {/* Recent Posts */}
           <div
             data-aos="fade-left"
             data-aos-duration="1000"
             data-aos-easing="ease-in-out"
           >
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-2xl font-bold">Tất cả bài viết</h2>
+              <h2 className="text-2xl font-bold">Bài viết mới nhất</h2>
               <a
                 href="/blog"
                 className="text-purple-600 text-sm hover:underline transition duration-200"
@@ -236,12 +223,12 @@ function HomePage() {
                 <div className="text-sm text-gray-600 mb-1">
                   By{" "}
                   <span className="text-indigo-600">
-                    {authorNames[post.uid] || "Tác giả không xác định"}
+                    {post?.uid?.username || "Tác giả không xác định"}
                   </span>{" "}
                   | {new Date(post.createdAt).toLocaleDateString("vi-VN")}
                 </div>
                 <p className="font-bold text-sm">
-                  <span className="italic">{post.title}</span>
+                  <span className="italic">{post?.title}</span>
                 </p>
               </div>
             ))}

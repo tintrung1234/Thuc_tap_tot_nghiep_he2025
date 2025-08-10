@@ -21,11 +21,14 @@ const Footer = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mx-auto max-w-4xl mb-6">
         <div>
           <h3 className="text-lg font-semibold mb-4">KHÁM PHÁ THÊM</h3>
-          <a href="login" className="block text-gray-400 hover:text-white mb-2">
+          <a
+            href="/login"
+            className="block text-gray-400 hover:text-white mb-2"
+          >
             Đăng nhập
           </a>
           <a
-            href="register"
+            href="/register"
             className="block text-gray-400 hover:text-white mb-2"
           >
             Tạo tài khoản
@@ -43,7 +46,7 @@ const Footer = () => {
             Chính sách bảo mật
           </a>
           <a
-            href="terms-of-service"
+            href="/terms-of-service"
             className="block text-gray-400 hover:text-white"
           >
             Điều khoản dịch vụ

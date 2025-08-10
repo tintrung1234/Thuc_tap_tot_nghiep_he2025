@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { auth } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import axios from "axios";
 import { toast } from "react-toastify";
 import AuthorSkeleton from "../components/AuthorSkeleton";
 import AvatarDropzone from "../components/AvatarDropzone";
 import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  updatePassword,
-} from "firebase/auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import RequireAuth from "../middleware/RequireAuth";
 
@@ -30,7 +23,6 @@ export default function AuthorPage() {
   const [avatarError, setAvatarError] = useState("");
   const [preview, setPreview] = useState("");
   const [removeAvatar, setRemoveAvatar] = useState(false);
-
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -55,27 +47,30 @@ export default function AuthorPage() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("token");
+      const userData = JSON.parse(localStorage.getItem("user"));
+      if (token && userData?.uid) {
         try {
           const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/profile/${currentUser.uid}`
+            `http://localhost:3000/api/users/profile/${userData.uid}`,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
+          setUser(userData);
           setProfile(profileResponse.data);
           setEditedProfile({
             username: profileResponse.data.username || "",
             email: profileResponse.data.email || "",
             photoUrl: profileResponse.data.photoUrl || "",
           });
-          console.log(profileResponse);
           setPreview(profileResponse.data.photoUrl || "");
-          await fetchUserPosts(currentUser.uid);
-          const token = await currentUser.getIdToken();
-          console.log("Firebase ID Token:", token);
+          await fetchUserPosts(userData.uid, token);
         } catch (error) {
           toast.error("Không thể tải thông tin tài khoản!");
           console.error("Error fetching profile:", error);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
         }
       } else {
         setUser(null);
@@ -83,15 +78,16 @@ export default function AuthorPage() {
         setPosts([]);
       }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    fetchUserData();
+  }, [navigate]);
 
-  const fetchUserPosts = async (uid) => {
+  const fetchUserPosts = async (uid, token) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/posts/user/${uid}`
+        `http://localhost:3000/api/posts/user/${uid}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setPosts(response.data);
     } catch (error) {
@@ -100,15 +96,11 @@ export default function AuthorPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Đăng xuất thành công!");
-      navigate("/login");
-    } catch (error) {
-      toast.error("Đăng xuất thất bại!");
-      console.error("Error during logout:", error);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    toast.success("Đăng xuất thành công!");
+    navigate("/login");
   };
 
   const handleEditUsername = () => {
@@ -118,26 +110,28 @@ export default function AuthorPage() {
   const handleSaveProfile = async () => {
     try {
       setLoading(true);
-      const user = auth.currentUser;
-      if (!user) throw new Error("Người dùng chưa đăng nhập");
+      const token = localStorage.getItem("token");
+      const userData = JSON.parse(localStorage.getItem("user"));
+      if (!token || !userData?.uid)
+        throw new Error("Người dùng chưa đăng nhập");
 
-      const token = await user.getIdToken();
       const formData = new FormData();
       formData.append("username", editedProfile.username);
-
       if (avatarFile) {
         formData.append("file", avatarFile);
       }
-
       if (removeAvatar) {
-        formData.append("removeAvatar", "true"); // báo cho server xoá ảnh
+        formData.append("removeAvatar", "true");
       }
 
       const response = await axios.put(
-        `http://localhost:5000/api/users/profile/${user.uid}`,
+        `http://localhost:3000/api/users/profile/${userData.uid}`,
         formData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
 
@@ -147,7 +141,7 @@ export default function AuthorPage() {
         passwordSuccess = passwordResult.success;
         if (!passwordResult.success) {
           setPasswordErrors(passwordResult.error);
-          throw new Error(passwordResult.error || "Mật khẩu không hợp lệ");
+          throw new Error(passwordResult.error.form || "Mật khẩu không hợp lệ");
         }
       }
 
@@ -158,6 +152,8 @@ export default function AuthorPage() {
         setRemoveAvatar(false);
         setIsEditModalOpen(false);
         toast.success("Cập nhật thông tin thành công!");
+        // Cập nhật user trong localStorage
+        localStorage.setItem("user", JSON.stringify(response.data.user));
       }
     } catch (error) {
       toast.error("Cập nhật thông tin thất bại! Kiểm tra lại thông tin.");
@@ -170,8 +166,11 @@ export default function AuthorPage() {
   const handlePasswordUpdate = async () => {
     setPasswordErrors({});
 
-    const user = auth.currentUser;
-    if (!user) return { success: false, error: "Người dùng chưa đăng nhập" };
+    const token = localStorage.getItem("token");
+    const userData = JSON.parse(localStorage.getItem("user"));
+    if (!token || !userData?.uid) {
+      return { success: false, error: { form: "Người dùng chưa đăng nhập" } };
+    }
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       return {
@@ -181,10 +180,7 @@ export default function AuthorPage() {
     }
 
     if (newPassword.length < 6) {
-      return {
-        success: false,
-        error: { new: "Mật khẩu mới ít nhất 6 ký tự" },
-      };
+      return { success: false, error: { new: "Mật khẩu mới ít nhất 6 ký tự" } };
     }
 
     if (newPassword !== confirmPassword) {
@@ -195,12 +191,11 @@ export default function AuthorPage() {
     }
 
     try {
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        currentPassword
+      await axios.post(
+        `http://localhost:3000/api/users/change-password`,
+        { currentPassword, newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -208,10 +203,10 @@ export default function AuthorPage() {
       return { success: true };
     } catch (error) {
       console.error("Đổi mật khẩu lỗi:", error);
-      return {
-        success: false,
-        error: { form: "Đổi mật khẩu thất bại. Kiểm tra lại thông tin." },
-      };
+      const errorMessage =
+        error.response?.data?.error ||
+        "Đổi mật khẩu thất bại. Kiểm tra lại thông tin.";
+      return { success: false, error: { form: errorMessage } };
     }
   };
 
@@ -261,7 +256,6 @@ export default function AuthorPage() {
         <img
           src={
             profile?.photoUrl ||
-            user?.photoURL ||
             "https://res.cloudinary.com/daeorkmlh/image/upload/v1750775424/avatar-trang-4_jjrbuu.jpg"
           }
           alt="Profile"
@@ -269,15 +263,13 @@ export default function AuthorPage() {
         />
         <div>
           <h1 className="text-2xl md:text-4xl font-bold text-gray-800">
-            Hey there, I’m{" "}
-            {profile?.username || user.displayName || "Anonymous"} <br /> and
-            welcome to my Blog
+            Hey there, I’m {profile?.username || "Anonymous"} <br /> and welcome
+            to my Blog
           </h1>
           <p className="text-gray-600 mt-4 max-w-xl">
-            {profile?.email || user.email || "No email provided"} - Lorem ipsum
-            dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Non blandit massa enim
-            nec.
+            {profile?.email || "No email provided"} - Lorem ipsum dolor sit
+            amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
+            ut labore et dolore magna aliqua. Non blandit massa enim nec.
           </p>
           <div className="flex gap-4 mt-4 text-gray-600">
             <a href="#" className="text-gray-400 hover:text-blue-400">
@@ -332,13 +324,13 @@ export default function AuthorPage() {
                   onClick={() => handleDetailClick(post._id)}
                 >
                   <img
-                    src={post.imageUrl || "/placeholder-image.jpg"} // Fallback image
+                    src={post.imageUrl || "/placeholder-image.jpg"}
                     alt={post.title}
                     className="w-full md:w-1/3 h-48 object-cover rounded-lg"
                   />
                   <div className="flex-1 p-4">
                     <p className="text-purple-600 uppercase font-semibold text-sm">
-                      {post.category || "Uncategorized"}
+                      {post.category?.name || post.category || "Uncategorized"}
                     </p>
                     <h3 className="text-xl font-bold text-gray-800 mt-1 line-clamp-2">
                       {post.title || "Untitled Post"}
@@ -346,7 +338,7 @@ export default function AuthorPage() {
                     <div className="text-gray-600 mt-2">
                       <h2
                         className="mr-1 max-h-[50vh] overflow-y-auto overflow-x-hidden"
-                        style={{ maxHeight: "50vh" }} // Fallback for older browsers
+                        style={{ maxHeight: "50vh" }}
                         dangerouslySetInnerHTML={{
                           __html:
                             truncateDescription(post.description || "", 200) ||
@@ -359,11 +351,11 @@ export default function AuthorPage() {
                         {post.tags.map((tagItem, tagIndex) => (
                           <a
                             key={tagIndex}
-                            href={`/tags/${tagItem}`} // Changed to <a> for simplicity if Link isn't required
+                            href={`/tags/${tagItem.name || tagItem}`}
                             className="text-blue-500 text-sm hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            #{tagItem}
+                            #{tagItem.name || tagItem}
                           </a>
                         ))}
                       </div>

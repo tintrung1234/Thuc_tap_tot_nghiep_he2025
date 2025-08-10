@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import UserAva from "../assets/UserAva.jpg";
 import axios from "axios";
 import BlogDetailSkeleton from "../components/BlogDetailSkeleton";
 import { toast } from "react-toastify";
-import { Link } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
 
 export default function BlogDetail() {
   const { id } = useParams();
@@ -14,16 +11,20 @@ export default function BlogDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [userName, setUserName] = useState("");
-  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const fetchPostById = async () => {
       setLoading(true);
-      setError(false); // Reset error state on new fetch
+      setError(false);
       try {
+        const token = localStorage.getItem("token");
+        const config = token
+          ? { headers: { Authorization: `Bearer ${token}` } }
+          : {};
         const response = await axios.get(
-          `http://localhost:5000/api/posts/detail/${encodeURIComponent(id)}`
+          `http://localhost:5000/api/posts/detail/${encodeURIComponent(id)}`,
+          config
         );
         setPost(response.data);
       } catch (error) {
@@ -39,36 +40,38 @@ export default function BlogDetail() {
   }, [id]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (token && user?.uid) {
         try {
-          const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/profile/${currentUser.uid}`
+          const response = await axios.get(
+            `http://localhost:5000/api/users/${user.uid}`,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
-          setProfile(profileResponse.data);
+          setProfile(response.data);
         } catch (error) {
           toast.error("Không thể tải thông tin tài khoản!");
           console.error("Error fetching profile:", error);
         }
-      } else {
-        setUser(null);
-        setProfile(null);
       }
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchUserProfile();
   }, []);
 
   useEffect(() => {
     const getUserName = async () => {
-      if (!post || !post.uid) return; // Wait until post is loaded
+      if (!post || !post.uid) return;
       try {
+        const token = localStorage.getItem("token");
+        const config = token
+          ? { headers: { Authorization: `Bearer ${token}` } }
+          : {};
         const response = await axios.get(
-          `http://localhost:5000/api/users/profile/${post.uid}`
+          `http://localhost:5000/api/users/${post.uid}`,
+          config
         );
-
         setUserName(response.data.username);
       } catch (error) {
         toast.error("Không thể tải thông tin người dùng!");
@@ -91,7 +94,7 @@ export default function BlogDetail() {
     );
   }
 
-  const { category, title, description, createdAt, imageUrl } = post;
+  const { category, title, description, createdAt, imageUrl, tags } = post;
 
   return (
     <div
@@ -105,7 +108,6 @@ export default function BlogDetail() {
         <img
           src={
             profile?.photoUrl ||
-            user?.photoURL ||
             "https://res.cloudinary.com/daeorkmlh/image/upload/v1750775424/avatar-trang-4_jjrbuu.jpg"
           }
           alt="Author Avatar"
@@ -115,7 +117,6 @@ export default function BlogDetail() {
           <p className="text-blue-600 font-semibold text-sm">
             {userName || "Tác giả không xác định"}
           </p>
-
           <p className="text-gray-500 text-xs">
             Đăng ngày {new Date(createdAt).toLocaleDateString("vi-VN")}
           </p>
@@ -132,21 +133,21 @@ export default function BlogDetail() {
         <span role="img" aria-label="emoji">
           🎯
         </span>
-        <span>{category}</span>
+        <span>{category?.name || category}</span>
       </div>
 
       {/* Tags */}
       <div className="text-gray-700 font-medium flex items-center space-x-1">
-        {post.tags && post.tags.length > 0 && (
+        {tags && tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {post.tags.map((tagItem, tagIndex) => (
+            {tags.map((tagItem, tagIndex) => (
               <Link
                 key={tagIndex}
                 to={`/tags/${tagItem}`}
                 className="text-blue-500 text-sm hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                #{tagItem}
+                #{tagItem.name || tagItem}
               </Link>
             ))}
           </div>

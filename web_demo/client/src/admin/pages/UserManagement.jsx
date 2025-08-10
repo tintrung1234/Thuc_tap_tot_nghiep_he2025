@@ -4,13 +4,11 @@ import CreateUserModal from "../components/CreateUserModal";
 import EditUserModal from "../components/EditUserModal";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
 import RequireAuthAdmin from "../../middleware/RequireAuthAdmin";
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
-  const [posts, setPosts] = useState([]); // Added to support getPostCount
+  const [posts, setPosts] = useState([]);
   // eslint-disable-next-line no-unused-vars
   const [selectedUser, setSelectedUser] = useState(null);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -24,8 +22,16 @@ function UserManagement() {
   // Fetch users from API
   useEffect(() => {
     const fetchUsers = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Vui lòng đăng nhập để truy cập!");
+        return;
+      }
+
       try {
-        const res = await axios.get("http://localhost:5000/api/users");
+        const res = await axios.get("http://localhost:3000/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const formattedUsers = res.data.map((user) => ({
           uid: user.uid,
           name: user.username,
@@ -37,6 +43,11 @@ function UserManagement() {
       } catch (error) {
         console.error("Lỗi khi lấy user từ MongoDB:", error);
         toast.error("Không thể tải danh sách người dùng!");
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        }
       }
     };
 
@@ -46,8 +57,16 @@ function UserManagement() {
   // Fetch posts from API to support getPostCount
   useEffect(() => {
     const fetchPosts = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Vui lòng đăng nhập để truy cập!");
+        return;
+      }
+
       try {
-        const res = await axios.get("http://localhost:5000/api/posts");
+        const res = await axios.get("http://localhost:3000/api/posts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const formattedPosts = res.data.map((post) => ({
           id: post._id,
           title: post.title,
@@ -73,23 +92,26 @@ function UserManagement() {
     const email = formData.get("email");
     const password = formData.get("password");
     const username = formData.get("name");
-    let role = formData.get("role") || "User";
+    const role = formData.get("role") || "User";
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để tạo người dùng!");
+      return;
+    }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const uid = userCredential.user.uid;
-
-      const newUser = { uid, email, username, role };
-      await axios.post("http://localhost:5000/api/users/register", newUser);
+      const newUser = { email, username, password, role };
+      await axios.post("http://localhost:3000/api/users/register", newUser, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       toast.success("Tạo user thành công!");
       setShowCreateUserModal(false);
       e.target.reset();
-      const res = await axios.get("http://localhost:5000/api/users");
+      const res = await axios.get("http://localhost:3000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUsers(
         res.data.map((user) => ({
           uid: user.uid,
@@ -100,7 +122,7 @@ function UserManagement() {
         }))
       );
     } catch (error) {
-      console.error(error);
+      console.error("Lỗi khi tạo user:", error);
       toast.error(
         error?.response?.data?.error || "Có lỗi xảy ra khi tạo user!"
       );
@@ -116,10 +138,19 @@ function UserManagement() {
       role: formData.get("role"),
     };
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để cập nhật người dùng!");
+      return;
+    }
+
     try {
       await axios.put(
-        `http://localhost:5000/api/users/update/${currentUser.uid}`,
-        updatedUser
+        `http://localhost:3000/api/users/update/${currentUser.uid}`,
+        updatedUser,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       setUsers((prevUsers) =>
@@ -146,8 +177,16 @@ function UserManagement() {
       return;
     }
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để xóa người dùng!");
+      return;
+    }
+
     try {
-      await axios.delete(`http://localhost:5000/api/users/delete/${uid}`);
+      await axios.delete(`http://localhost:3000/api/users/delete/${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
       toast.success("Xóa user thành công");
     } catch (error) {
@@ -200,7 +239,7 @@ function UserManagement() {
       <main className="bg-white rounded-lg shadow-md p-6">
         <UserTable
           users={users}
-          posts={posts} // Pass posts to calculate post count
+          posts={posts}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           selectedRole={selectedRole}
@@ -214,7 +253,7 @@ function UserManagement() {
           openEditUserModal={openEditUserModal}
           handleDeleteUser={handleDeleteUser}
           setShowCreateUserModal={setShowCreateUserModal}
-          getPostCount={getPostCount} // Pass getPostCount function
+          getPostCount={getPostCount}
         />
       </main>
 
