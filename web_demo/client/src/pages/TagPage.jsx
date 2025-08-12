@@ -8,19 +8,21 @@ import BlogSkeleton from "../components/BlogSkeleton";
 import { toast } from "react-toastify";
 
 const TagPage = () => {
-  const { tag } = useParams();
+  const { slug } = useParams();
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 10;
   const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const fetchPostsByTag = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/posts/tag/${encodeURIComponent(tag)}`
+          `http://localhost:5000/api/posts/tags/${slug}`
         );
-        setPosts(response.data);
+        setPosts(response.data.posts || []);
+        setTotalPages(Math.ceil(response.data.total / postsPerPage));
       } catch (error) {
         toast.error("Không thể tải bài viết. Vui lòng thử lại sau!");
         console.error("Error fetching posts by tag:", error);
@@ -29,35 +31,30 @@ const TagPage = () => {
       }
     };
     fetchPostsByTag();
-  }, [tag]);
-
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(posts.length / postsPerPage);
+  }, [slug]);
 
   const handlePrev = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
+    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
+    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Tags {tag}</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">
+        Tags {"#" + posts[0]?.tags[0]?.name}
+      </h1>
       <hr className="border-t border-gray-300 mb-6" />
       {loading ? (
         <BlogSkeleton count={postsPerPage} />
-      ) : currentPosts.length > 0 ? (
+      ) : posts.length > 0 ? (
         <>
-          {currentPosts.map((post) => (
-            <PostItem key={post._id || post.title} post={post} />
+          {posts.map((post) => (
+            <PostItem key={post._id} post={post} />
           ))}
           <PaginationControls
             currentPage={currentPage}

@@ -1,12 +1,61 @@
-import React from "react";
 import AuthorsList from "../components/AuthorsList";
 import teamWork from "../assets/team_working_together.png";
 import teamCreative from "../assets/team_of_creatives.png";
 import weStarted from "../assets/why_we_started.png";
 import SectionBlock from "../components/SectionBlock";
 import JoinSection from "../components/JoinSection";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-const AboutUsPage = () => {
+const AnimatedCounter = ({ value }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const duration = 2000; // 2 giây
+    const startTime = performance.now();
+
+    const step = (currentTime) => {
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      setCount(Math.floor(progress * value));
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+
+    requestAnimationFrame(step);
+  }, [value]);
+
+  const formatNumber = (num) => {
+    if (num >= 1000) {
+      return `${Math.floor(num / 1000)}K+`;
+    }
+    return num;
+  };
+
+  return <h3 className="text-3xl font-bold">{formatNumber(count)}</h3>;
+};
+
+export default function AboutUsPage() {
+  const [stats, setStats] = useState({
+    totalBlogs: 0,
+    totalViews: 0,
+    totalUsers: 0,
+  });
+
+  useEffect(() => {
+    const getStats = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/stats`);
+        setStats(response.data);
+      } catch (error) {
+        toast.error("Không thể tải dữ liệu thống kê!");
+        console.error("Error fetching stats:", error);
+      }
+    };
+    getStats();
+  }, []);
+
   return (
     <div className="max-w-5xl mx-auto px-2 py-12 ">
       {/* Header Section */}
@@ -31,15 +80,15 @@ const AboutUsPage = () => {
         />
         <div className="absolute inset-0 flex justify-around items-center text-white">
           <div className="bg-yellow-400 text-black p-4 rounded-lg text-center">
-            <h3 className="text-3xl font-bold">12+</h3>
+            <AnimatedCounter value={stats.totalBlogs} />
             <p>Blogs Published</p>
           </div>
           <div className="bg-yellow-400 text-black p-4 rounded-lg text-center">
-            <h3 className="text-3xl font-bold">18K+</h3>
+            <AnimatedCounter value={stats.totalViews} />
             <p>Views on Finsweet</p>
           </div>
           <div className="bg-yellow-400 text-black p-4 rounded-lg text-center">
-            <h3 className="text-3xl font-bold">30K+</h3>
+            <AnimatedCounter value={stats.totalUsers} />
             <p>Total Active Users</p>
           </div>
         </div>
@@ -103,6 +152,4 @@ const AboutUsPage = () => {
       <JoinSection />
     </div>
   );
-};
-
-export default AboutUsPage;
+}
