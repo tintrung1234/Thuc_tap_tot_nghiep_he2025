@@ -46,6 +46,21 @@ const getPostsByCategory = async (req, res) => {
   }
 };
 
+const getPostsByTags = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { page, limit } = req.query;
+    const result = await PostService.getPostsByTags({
+      tagsSlug: slug,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(404).json({ error: error.message });
+  }
+};
+
 const getPostBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -163,6 +178,7 @@ module.exports = {
   getAllPosts,
   searchPosts,
   getPostsByCategory,
+  getPostsByTags,
   getPostBySlug,
   getTopPost,
   getFeaturedPosts,

@@ -6,6 +6,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 router.get("/", postController.getAllPosts);
 router.get("/search", postController.searchPosts);
 router.get("/category/:slug", postController.getPostsByCategory);
+router.get("/tags/:slug", postController.getPostsByTags);
 router.get("/top", postController.getTopPost);
 router.get("/featured", postController.getFeaturedPosts);
 router.get("/recent", postController.getRecentPosts);

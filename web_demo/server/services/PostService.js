@@ -19,12 +19,13 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
     const total = await Post.countDocuments({
       status: "published",
       isDeleted: false,
     });
+
     return { posts, total, page, limit };
   }
 
@@ -41,7 +42,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
     const total = await Post.countDocuments({
       $text: { $search: query },
@@ -71,10 +72,40 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
     const total = await Post.countDocuments({
       category: category._id,
+      status: "published",
+      isDeleted: false,
+    });
+    return { posts, total, page, limit };
+  }
+
+  static async getPostsByTags({ tagsSlug, page = 1, limit = 10 }) {
+    const tags = await Tag.findOne({
+      slug: tagsSlug,
+      isDeleted: false,
+    });
+    if (!tags) throw new Error("Category not found");
+
+    const skip = (page - 1) * limit;
+    const posts = await Post.find({
+      tags: tags._id,
+      status: "published",
+      isDeleted: false,
+    })
+      .populate("category", "name slug")
+      .populate("uid", "username")
+      .populate("tags", "name slug")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select(
+        "title slug content description imageUrl category tags views createdAt"
+      );
+    const total = await Post.countDocuments({
+      tags: tags._id,
       status: "published",
       isDeleted: false,
     });
@@ -88,7 +119,7 @@ class PostService {
       { new: true }
     )
       .populate("category", "name slug")
-      .populate("uid", "username")
+      .populate("uid", "username photoUrl")
       .populate("tags", "name slug");
     if (!post) throw new Error("Post not found");
     return post;
@@ -101,7 +132,7 @@ class PostService {
       .populate("tags", "name slug")
       .sort({ views: -1 })
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
     if (!post) throw new Error("No posts found");
     return post;
@@ -118,7 +149,7 @@ class PostService {
       .sort({ shares: -1 })
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
 
     if (!posts || posts.length === 0) {
@@ -136,7 +167,7 @@ class PostService {
       .sort({ createdAt: -1 })
       .limit(limit)
       .select(
-        "title slug content description content imageUrl category tags views shares createdAt"
+        "title slug content description content imageUrl category tags views createdAt"
       );
 
     if (!posts || posts.length === 0) {
