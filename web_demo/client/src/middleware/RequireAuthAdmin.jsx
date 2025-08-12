@@ -1,41 +1,20 @@
-import React, { useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { Navigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
 
 export default function RequireAuthAdmin({ children }) {
-  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        toast.error("Bạn chưa đăng nhập!", {
-          autoClose: 700,
-        });
-        navigate("/login");
-      } else {
-        try {
-          // Lấy role từ backend bằng uid
-          const res = await axios.get(`http://localhost:5000/api/users/profile/${user.uid}`);
-          console.log("User role:", res.data?.role);
-          if (res.data?.role === "Admin") {
-            toast.success("Đã đăng nhập với quyền Admin!", {
-              autoClose: 500,
-            });
-          } else {
-            navigate("/not-found-page"); // Trang thông báo không có quyền
-          }
-          // eslint-disable-next-line no-unused-vars
-        } catch (error) {
-          navigate("/not-found-page");
-        }
-      }
-    });
+  if (!token || !user) {
+    toast.error("Vui lòng đăng nhập để truy cập!");
+    return <Navigate to="/login" replace />;
+  }
 
-    return () => unsubscribe();
-  }, [navigate]);
+  if (user.role !== "Admin") {
+    toast.error("Bạn cần quyền admin để truy cập trang này!");
+    return <Navigate to="/" replace />;
+  }
 
-  return children;
+  return children || null;
 }

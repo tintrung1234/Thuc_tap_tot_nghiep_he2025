@@ -6,7 +6,16 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["like", "comment", "share", "follow", "mention"],
+      enum: [
+        "like",
+        "comment",
+        "share",
+        "follow",
+        "mention",
+        "contact_created",
+        "term_created",
+        "policy_created",
+      ],
       index: true,
     },
     relatedId: { type: String, required: true, index: true }, // ID of related resource (Post, Comment, etc.)

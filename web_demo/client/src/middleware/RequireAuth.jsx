@@ -1,40 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 export default function RequireAuth({ children }) {
-  const navigate = useNavigate();
-  // eslint-disable-next-line no-unused-vars
-  const [loadingToast, setLoadingToast] = useState(null);
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
   useEffect(() => {
-    // Show loading toast
-    const toastId = toast.loading("Đang kiểm tra đăng nhập...");
-    setLoadingToast(toastId);
+    if (!token || !user) {
+      toast.error("Vui lòng đăng nhập để truy cập trang này!");
+    }
+  }, [token, user]);
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        toast.update(toastId, {
-          render: "Bạn chưa đăng nhập!",
-          type: "error",
-          isLoading: false,
-          autoClose: 700,
-        });
-        navigate("/login");
-      } else {
-        toast.update(toastId, {
-          render: "Đã đăng nhập!",
-          type: "success",
-          isLoading: false,
-          autoClose: 500,
-        });
-      }
-    });
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
 
-    return () => unsubscribe();
-  }, [navigate]);
-
-  return children;
+  return children || null;
 }

@@ -16,6 +16,7 @@ import WriteBlogPage from "./pages/WriteBlogPage";
 import BlogDetail from "./pages/BlogDetail";
 import AuthorPage from "./pages/AuthorPage";
 import NotFoundPage from "./pages/Error404";
+import EditProfilePage from "./pages/EditProfilePage";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -37,12 +38,13 @@ const App = () => {
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/tags/:tag" element={<TagPage />} />
-          <Route path="/category/:category" element={<CategoryPage />} />
+          <Route path="/tags/:slug" element={<TagPage />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/write-blog" element={<WriteBlogPage />} />
-          <Route path="/detail/:id" element={<BlogDetail />} />
+          <Route path="/detail/:slug" element={<BlogDetail />} />
           <Route path="/author" element={<AuthorPage />} />
           <Route path="/not-found-page" element={<NotFoundPage />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
         </Route>
 
         {/* 🛠 Admin Layout (gọi trong AdminRoutes.jsx) */}

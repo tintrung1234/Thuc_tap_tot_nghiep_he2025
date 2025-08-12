@@ -1,14 +1,22 @@
 import React from "react";
-import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../../firebase"; // thay đổi đường dẫn đúng với dự án bạn
 
 function Header({ toggleSidebar }) {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     try {
-      await signOut(auth);
+      // Xóa token trong localStorage hoặc sessionStorage
+      localStorage.removeItem("token");
+
+      // Nếu backend có endpoint logout thì có thể gọi ở đây:
+      // fetch("http://localhost:5000/api/auth/logout", {
+      //   method: "POST",
+      //   headers: {
+      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //   },
+      // });
+
       navigate("/login");
     } catch (error) {
       console.error("Đăng xuất thất bại:", error);

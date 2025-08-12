@@ -1,47 +1,21 @@
 /* eslint-disable no-unused-vars */
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import RequireAuth from "../middleware/RequireAuth";
+import { generateText } from "../services/AiService";
+import ImagePostDropzone from "../components/ImagePostDropzone";
 import "../style/css/style.css";
-import UserAva from "../assets/UserAva.jpg";
 import shuttle from "../assets/shuttle.png";
 import business from "../assets/business.png";
 import economy from "../assets/economy.png";
 import cyborg from "../assets/cyborg.png";
 import Editor from "../components/Editor";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
-import RequireAuth from "../middleware/RequireAuth";
-import { getAuth } from "firebase/auth";
-import { generateText } from "../services/AiService";
-import ImagePostDropzone from "../components/ImagePostDropzone";
 
 export default function WriteBlogPage() {
   const navigate = useNavigate();
   const categories = ["Startup", "Business", "Economy", "Technology"];
-  const [userName, setUserName] = useState("");
-
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [aiResult, setAiResult] = useState("");
-
-  const handleAiGenerate = async () => {
-    if (!aiPrompt.trim()) {
-      toast.error("Enter a prompt for AI generation.");
-      return;
-    }
-    setIsLoadingAI(true);
-    try {
-      const result = await generateText(aiPrompt);
-      setAiResult(result); // save AI result
-      toast.success("AI generation successful!");
-    } catch (error) {
-      toast.error("Error generating AI text.");
-    } finally {
-      setIsLoadingAI(false);
-    }
-  };
-
   const tagsName = [
     "Experience",
     "Screen",
@@ -52,11 +26,15 @@ export default function WriteBlogPage() {
   ];
   const image = [shuttle, business, economy, cyborg];
 
+  const [userName, setUserName] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [aiResult, setAiResult] = useState("");
   const [title, setTitle] = useState("");
   const [categorys, setCategorys] = useState("");
   const [tags, setTags] = useState([]);
-  const [description, setdescription] = useState("");
-  const [imageFile, setImageFile] = useState(null); // Changed from imageUrl to imageFile
+  const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState(null);
   const [imageError, setImageError] = useState("");
   const [preview, setPreview] = useState("");
 
@@ -68,7 +46,7 @@ export default function WriteBlogPage() {
       setTitle(draft.title || "");
       setCategorys(draft.categorys || "");
       setTags(draft.tags || []);
-      setdescription(draft.description || "");
+      setDescription(draft.description || "");
       setPreview(
         draft.imageUrl ||
           "https://res.cloudinary.com/daeorkmlh/image/upload/v1750835215/No-Image-Placeholder.svg_v0th8g.png"
@@ -91,64 +69,88 @@ export default function WriteBlogPage() {
     }
   }, [imageFile]);
 
+  // Fetch user info from localStorage and API
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        try {
-          const userID = user.uid;
-          const response = await axios.get(
-            `http://localhost:5000/api/users/profile/${userID}`
-          );
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (token && user?.uid) {
+      axios
+        .get(`http://localhost:5000/api/users/${user.uid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((response) => {
           setUserName(response.data.username);
-        } catch (error) {
+        })
+        .catch((error) => {
           toast.error("Không thể tải thông tin người dùng!");
           console.error("Error fetching user:", error);
-        }
-      } else {
-        setUserName("");
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
+          if (error.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/login");
+          }
+        });
+    } else {
+      setUserName("");
+    }
+  }, [navigate]);
 
   // Handle Editor content
   const handleEditorChange = (html) => {
-    setdescription(html);
+    setDescription(html);
   };
 
+  // Handle AI generation
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Enter a prompt for AI generation.");
+      return;
+    }
+    setIsLoadingAI(true);
+    try {
+      const result = await generateText(aiPrompt);
+      setAiResult(result);
+      toast.success("AI generation successful!");
+    } catch (error) {
+      toast.error("Error generating AI text.");
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  // Handle save draft
   const handleSaveDraft = () => {
     const draft = {
       categorys,
       title,
       description,
-      imageUrl: preview, // Save preview URL for draft
+      imageUrl: preview,
       tags,
     };
     localStorage.setItem("blogDraft", JSON.stringify(draft));
     toast.success("Lưu bản nháp thành công trên máy!");
   };
+
+  // Handle submit post
   const handleSubmit = async () => {
     const toastId = toast.loading("Đang đăng bài viết...");
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!token || !user?.uid) {
+      toast.update(toastId, {
+        render: "Bạn chưa đăng nhập!",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
+      navigate("/login");
+      return;
+    }
 
     try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-
-      if (!currentUser) {
-        toast.update(toastId, {
-          render: "Bạn chưa đăng nhập!",
-          type: "error",
-          isLoading: false,
-          autoClose: 3000,
-        });
-        return;
-      }
-
-      const token = await currentUser.getIdToken();
       const formData = new FormData();
-      formData.append("uid", currentUser.uid);
+      formData.append("uid", user.uid);
       formData.append("title", title);
       formData.append("description", description);
       formData.append("category", categorys);
@@ -166,7 +168,7 @@ export default function WriteBlogPage() {
       setTitle("");
       setCategorys("");
       setTags([]);
-      setdescription("");
+      setDescription("");
       setImageFile(null);
       setPreview(
         "https://res.cloudinary.com/daeorkmlh/image/upload/v1750835215/No-Image-Placeholder.svg_v0th8g.png"
@@ -184,7 +186,7 @@ export default function WriteBlogPage() {
     } catch (err) {
       console.error(err);
       toast.update(toastId, {
-        render: "Lỗi khi đăng bài viết.",
+        render: err.response?.data?.error || "Lỗi khi đăng bài viết.",
         type: "error",
         isLoading: false,
         autoClose: 3000,
@@ -203,7 +205,7 @@ export default function WriteBlogPage() {
                 <div className="flex-col">
                   <div className="flex items-center w-full">
                     <img
-                      src={UserAva}
+                      src={""}
                       alt="useravatar"
                       className="h-[75px] w-[73px] rounded-full mr-4"
                     />
@@ -301,7 +303,7 @@ export default function WriteBlogPage() {
               <div className="p-3">
                 <label className="block font-semibold text-[24px]">Image</label>
                 <ImagePostDropzone
-                  setAvatarFile={setImageFile} // Changed to setImageFile
+                  setAvatarFile={setImageFile}
                   setPreview={setPreview}
                   setAvatarError={setImageError}
                 />
@@ -347,7 +349,7 @@ export default function WriteBlogPage() {
                     {aiResult}
                   </div>
                   <button
-                    onClick={() => setdescription(aiResult)}
+                    onClick={() => setDescription(aiResult)}
                     className="mt-2 w-44 bg-green-600 text-white font-bold text-[18px] p-3 rounded hover:bg-green-700 transition"
                   >
                     Use in Editor

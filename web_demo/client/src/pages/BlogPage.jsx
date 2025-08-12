@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
 import axios from "axios";
 import PostItem from "../components/PostItem";
 import PaginationControls from "../components/PaginationControls";
@@ -11,92 +10,64 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
 function BlogPage() {
-  const { category } = useParams();
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 5;
-  const [loading, setLoading] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [loadingTopPost, setLoadingTopPost] = useState(true);
   const [topPost, setTopPost] = useState(null);
-  const [authorNames, setAuthorNames] = useState({});
+  const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
+  // Fetch all posts with pagination
   useEffect(() => {
     const getAllPosts = async () => {
-      setLoading(true);
+      setLoadingPosts(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/posts`);
-        setPosts(response.data);
+        const response = await axios.get(
+          `http://localhost:5000/api/posts?page=${currentPage}&limit=${postsPerPage}`
+        );
+        setPosts(response.data.posts || []);
+        setTotalPages(Math.ceil(response.data.total / postsPerPage));
       } catch (error) {
         toast.error("Không thể tải danh sách bài viết. Vui lòng thử lại sau!");
         console.error("Error fetching all posts:", error);
       } finally {
-        setLoading(false);
+        setLoadingPosts(false);
       }
     };
     getAllPosts();
-  }, [category]); // Added category to dependency array to refetch if category changes
+  }, [currentPage]);
 
-  // Fetch top post
+  // Fetch top post once
   useEffect(() => {
     const getTopPost = async () => {
-      setLoading(true);
+      setLoadingTopPost(true);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/topblog`
-        );
-        setTopPost(response.data); // Assuming single object from .findOne()
+        const response = await axios.get(`http://localhost:5000/api/posts/top`);
+        setTopPost(response.data || null);
       } catch (error) {
-        toast.error("Không thể tải dữ liệu bài biết top 1!");
+        toast.error("Không thể tải dữ liệu bài viết top 1!");
         console.error("Error fetching top blog:", error);
       } finally {
-        setLoading(false);
+        setLoadingTopPost(false);
       }
     };
     getTopPost();
   }, []);
 
-  const fetchUserName = async (uid) => {
-    if (!uid || authorNames[uid]) return; // Skip if no UID or already fetched
-
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/api/users/profile/${uid}`
-      );
-      setAuthorNames((prev) => ({
-        ...prev,
-        [uid]: response.data.username,
-      }));
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      toast.error("Không thể tải thông tin người dùng!");
-    }
-  };
-
-  useEffect(() => {
-    if (topPost && topPost.uid) {
-      fetchUserName(topPost.uid);
-    }
-  }, [topPost]);
-
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = posts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(posts.length / postsPerPage);
-
   const handlePrev = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
+    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
+    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDetailClick = (_id) => {
-    navigate(`/detail/${encodeURIComponent(_id)}`);
+  const handleDetailClick = (slug) => {
+    navigate(`/detail/${encodeURIComponent(slug)}`);
   };
 
   const truncateDescription = (html, maxLength) => {
@@ -104,23 +75,22 @@ function BlogPage() {
     div.innerHTML = html;
     const text = div.textContent || div.innerText || "";
     if (text.length <= maxLength) return html;
-    return (
-      `${text.substring(0, maxLength)}...` +
-      div.innerHTML.substring(0, div.innerHTML.indexOf(">", maxLength))
-    );
+    return `${text.substring(0, maxLength)}...`;
   };
 
   return (
     <div>
       <div className="w-full mx-auto" data-aos="fade-up">
-        {topPost ? (
-          <div className="bg-[#f4f0fa] py-4 px-6 md:px-16">
+        {/* Featured Post */}
+        {loadingTopPost ? (
+          <TopPostSkeleton />
+        ) : topPost ? (
+          <div className="bg-[#f4f0fa] py-4 px-6 md:px-16 md:py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div>
                 <p className="uppercase tracking-wide text-sm text-gray-600 mb-2">
                   Featured Post
                 </p>
-
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                   {topPost.title}
                 </h2>
@@ -128,14 +98,13 @@ function BlogPage() {
                   <p>
                     By{" "}
                     <span className="text-blue-600 font-medium">
-                      {authorNames[topPost?.uid] || "Tác giả không xác định"}
+                      {topPost?.uid?.username || "Tác giả không xác định"}
                     </span>{" "}
                     | {new Date(topPost.createdAt).toLocaleDateString("vi-VN")}
                   </p>
                 </div>
                 <h2
-                  className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto mt-2 mb-4"
-                  style={{ maxHeight: "50vh" }} // Fallback for older browsers
+                  className="mr-1 w-full overflow-y-auto mt-2 mb-4"
                   dangerouslySetInnerHTML={{
                     __html:
                       truncateDescription(topPost?.description || "", 200) ||
@@ -144,14 +113,11 @@ function BlogPage() {
                 ></h2>
                 <button
                   className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-sm hover:bg-yellow-500 transition duration-200"
-                  onClick={() => {
-                    handleDetailClick(topPost._id);
-                  }}
+                  onClick={() => handleDetailClick(topPost.slug)}
                 >
                   Xem thêm {">"}
                 </button>
               </div>
-
               <div className="flex justify-center">
                 <img
                   src={topPost.imageUrl}
@@ -161,19 +127,18 @@ function BlogPage() {
               </div>
             </div>
           </div>
-        ) : (
-          <TopPostSkeleton />
-        )}
+        ) : null}
 
+        {/* All Posts */}
         <div className="max-w-5xl mx-auto px-6 py-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">All posts</h1>
           <hr className="border-t border-gray-300 mb-6" />
-          {loading ? (
+          {loadingPosts ? (
             <BlogSkeleton count={postsPerPage} />
-          ) : currentPosts.length > 0 ? (
+          ) : posts.length > 0 ? (
             <>
-              {currentPosts.map((post) => (
-                <PostItem key={post._id || post.title} post={post} />
+              {posts.map((post) => (
+                <PostItem key={post._id} post={post} />
               ))}
               <PaginationControls
                 currentPage={currentPage}

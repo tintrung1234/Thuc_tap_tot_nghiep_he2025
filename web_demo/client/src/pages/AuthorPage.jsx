@@ -1,81 +1,43 @@
 import React, { useEffect, useState } from "react";
-import { auth } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import axios from "axios";
 import { toast } from "react-toastify";
 import AuthorSkeleton from "../components/AuthorSkeleton";
-import AvatarDropzone from "../components/AvatarDropzone";
 import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  updatePassword,
-} from "firebase/auth";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import RequireAuth from "../middleware/RequireAuth";
+import fallback from "../assets/fallback.jpg";
 
 export default function AuthorPage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({
-    username: "",
-    email: "",
-    photoUrl: "",
-  });
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarError, setAvatarError] = useState("");
-  const [preview, setPreview] = useState("");
-  const [removeAvatar, setRemoveAvatar] = useState(false);
-
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPass, setShowPass] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-  const [passwordErrors, setPasswordErrors] = useState({});
 
   const navigate = useNavigate();
 
-  const handleDetailClick = (_id) => {
-    navigate(`/detail/${encodeURIComponent(_id)}`);
-  };
-
-  const handleRemoveAvatar = () => {
-    setAvatarFile(null);
-    setPreview("");
-    setRemoveAvatar(true);
+  const handleDetailClick = (slug) => {
+    navigate(`/detail/${slug}`);
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("token");
+      const userData = JSON.parse(localStorage.getItem("user"));
+      if (token && userData?.uid) {
         try {
           const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/profile/${currentUser.uid}`
+            `http://localhost:5000/api/users/${userData.uid}`,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
+          setUser(userData);
           setProfile(profileResponse.data);
-          setEditedProfile({
-            username: profileResponse.data.username || "",
-            email: profileResponse.data.email || "",
-            photoUrl: profileResponse.data.photoUrl || "",
-          });
-          console.log(profileResponse);
-          setPreview(profileResponse.data.photoUrl || "");
-          await fetchUserPosts(currentUser.uid);
-          const token = await currentUser.getIdToken();
-          console.log("Firebase ID Token:", token);
+          await fetchUserPosts(userData.id, token);
         } catch (error) {
           toast.error("Không thể tải thông tin tài khoản!");
           console.error("Error fetching profile:", error);
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
         }
       } else {
         setUser(null);
@@ -83,152 +45,29 @@ export default function AuthorPage() {
         setPosts([]);
       }
       setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    fetchUserData();
+  }, [navigate]);
 
-  const fetchUserPosts = async (uid) => {
+  const fetchUserPosts = async (uid, token) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/posts/user/${uid}`
+        `http://localhost:5000/api/posts/user/${uid}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      setPosts(response.data);
+      setPosts(response.data.posts);
     } catch (error) {
       toast.error("Không thể tải bài viết của bạn!");
       console.error("Error fetching user posts:", error);
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Đăng xuất thành công!");
-      navigate("/login");
-    } catch (error) {
-      toast.error("Đăng xuất thất bại!");
-      console.error("Error during logout:", error);
-    }
-  };
-
-  const handleEditUsername = () => {
-    setIsEditModalOpen(true);
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      setLoading(true);
-      const user = auth.currentUser;
-      if (!user) throw new Error("Người dùng chưa đăng nhập");
-
-      const token = await user.getIdToken();
-      const formData = new FormData();
-      formData.append("username", editedProfile.username);
-
-      if (avatarFile) {
-        formData.append("file", avatarFile);
-      }
-
-      if (removeAvatar) {
-        formData.append("removeAvatar", "true"); // báo cho server xoá ảnh
-      }
-
-      const response = await axios.put(
-        `http://localhost:5000/api/users/profile/${user.uid}`,
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      let passwordSuccess = true;
-      if (showChangePassword) {
-        const passwordResult = await handlePasswordUpdate();
-        passwordSuccess = passwordResult.success;
-        if (!passwordResult.success) {
-          setPasswordErrors(passwordResult.error);
-          throw new Error(passwordResult.error || "Mật khẩu không hợp lệ");
-        }
-      }
-
-      if (passwordSuccess) {
-        setProfile(response.data.user);
-        setEditedProfile(response.data.user);
-        setAvatarError("");
-        setRemoveAvatar(false);
-        setIsEditModalOpen(false);
-        toast.success("Cập nhật thông tin thành công!");
-      }
-    } catch (error) {
-      toast.error("Cập nhật thông tin thất bại! Kiểm tra lại thông tin.");
-      console.error("Error updating profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordUpdate = async () => {
-    setPasswordErrors({});
-
-    const user = auth.currentUser;
-    if (!user) return { success: false, error: "Người dùng chưa đăng nhập" };
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return {
-        success: false,
-        error: { form: "Vui lòng nhập đầy đủ các trường" },
-      };
-    }
-
-    if (newPassword.length < 6) {
-      return {
-        success: false,
-        error: { new: "Mật khẩu mới ít nhất 6 ký tự" },
-      };
-    }
-
-    if (newPassword !== confirmPassword) {
-      return {
-        success: false,
-        error: { confirm: "Mật khẩu xác nhận không khớp" },
-      };
-    }
-
-    try {
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        currentPassword
-      );
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setShowChangePassword(false);
-      return { success: true };
-    } catch (error) {
-      console.error("Đổi mật khẩu lỗi:", error);
-      return {
-        success: false,
-        error: { form: "Đổi mật khẩu thất bại. Kiểm tra lại thông tin." },
-      };
-    }
-  };
-
-  const handleCloseModal = () => {
-    setIsEditModalOpen(false);
-    setEditedProfile({
-      username: profile?.username || "",
-      email: profile?.email || "",
-      photoUrl: profile?.photoUrl || "",
-    });
-    setAvatarFile(null);
-    setAvatarError("");
-    setShowChangePassword(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordErrors({});
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    toast.success("Đăng xuất thành công!");
+    navigate("/login");
   };
 
   const truncateDescription = (html, maxLength) => {
@@ -257,11 +96,10 @@ export default function AuthorPage() {
   return (
     <div className="bg-gray-50 min-h-screen font-sans">
       {/* Hero Section */}
-      <section className="bg-purple py-12 px-6 md:px-20 flex flex-col justify-center md:flex-row items-center gap-10">
+      <section className="bg-purple-100 py-12 px-6 md:px-20 flex flex-col justify-center md:flex-row items-center gap-10">
         <img
           src={
             profile?.photoUrl ||
-            user?.photoURL ||
             "https://res.cloudinary.com/daeorkmlh/image/upload/v1750775424/avatar-trang-4_jjrbuu.jpg"
           }
           alt="Profile"
@@ -269,29 +107,47 @@ export default function AuthorPage() {
         />
         <div>
           <h1 className="text-2xl md:text-4xl font-bold text-gray-800">
-            Hey there, I’m{" "}
-            {profile?.username || user.displayName || "Anonymous"} <br /> and
-            welcome to my Blog
+            Hey there, I’m {profile?.username || "Anonymous"} <br /> and welcome
+            to my Blog
           </h1>
           <p className="text-gray-600 mt-4 max-w-xl">
-            {profile?.email || user.email || "No email provided"} - Lorem ipsum
-            dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Non blandit massa enim
-            nec.
+            {profile?.email || "No email provided"} -{" "}
+            {profile?.bio ||
+              "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."}
           </p>
           <div className="flex gap-4 mt-4 text-gray-600">
-            <a href="#" className="text-gray-400 hover:text-blue-400">
-              <FaFacebookF />
-            </a>
-            <a href="#" className="text-gray-400 hover:text-blue-400">
-              <FaTwitter />
-            </a>
-            <a href="#" className="text-gray-400 hover:text-blue-400">
-              <FaInstagram />
-            </a>
-            <a href="#" className="text-gray-400 hover:text-blue-400">
-              <FaYoutube />
-            </a>
+            {profile?.social?.facebook && (
+              <a
+                href={profile.social.facebook}
+                className="text-gray-400 hover:text-blue-400"
+              >
+                <FaFacebookF />
+              </a>
+            )}
+            {profile?.social?.twitter && (
+              <a
+                href={profile.social.twitter}
+                className="text-gray-400 hover:text-blue-400"
+              >
+                <FaTwitter />
+              </a>
+            )}
+            {profile?.social?.instagram && (
+              <a
+                href={profile.social.instagram}
+                className="text-gray-400 hover:text-blue-400"
+              >
+                <FaInstagram />
+              </a>
+            )}
+            {profile?.social?.linkedin && (
+              <a
+                href={profile.social.linkedin}
+                className="text-gray-400 hover:text-blue-400"
+              >
+                <FaYoutube />
+              </a>
+            )}
           </div>
           <div className="flex gap-4 mt-4">
             <button
@@ -300,12 +156,12 @@ export default function AuthorPage() {
             >
               Đăng xuất
             </button>
-            <button
-              onClick={handleEditUsername}
+            <Link
+              to="/edit-profile"
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               Chỉnh sửa
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -321,50 +177,53 @@ export default function AuthorPage() {
         <section className="px-6 py-12 w-full max-w-6xl">
           <h2 className="text-3xl font-bold text-gray-800 mb-8">My Posts</h2>
           <div
-            className="space-y-10 mb-8 shadow rounded cursor-pointer w-full"
+            className="space-y-10 mb-8 shadow rounded-2xl cursor-pointer w-full"
             data-aos="fade-up"
           >
             {posts.length > 0 ? (
               posts.map((post) => (
                 <div
                   key={post._id}
-                  className="flex flex-col md:flex-row gap-6 items-center w-full p-4 bg-white hover:bg-gray-50 transition-colors"
-                  onClick={() => handleDetailClick(post._id)}
+                  className="flex flex-col md:flex-row gap-6 items-center w-full p-4 bg-white 
+             border border-gray-200 rounded-2xl shadow-sm 
+             hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+                  onClick={() => handleDetailClick(post.slug)}
                 >
                   <img
-                    src={post.imageUrl || "/placeholder-image.jpg"} // Fallback image
+                    src={post.imageUrl || fallback}
                     alt={post.title}
-                    className="w-full md:w-1/3 h-48 object-cover rounded-lg"
+                    onError={(e) => (e.currentTarget.src = fallback)}
+                    className="w-full md:w-1/3 h-48 object-cover rounded-xl"
                   />
                   <div className="flex-1 p-4">
                     <p className="text-purple-600 uppercase font-semibold text-sm">
-                      {post.category || "Uncategorized"}
+                      {post.category?.name || "Uncategorized"}
                     </p>
                     <h3 className="text-xl font-bold text-gray-800 mt-1 line-clamp-2">
                       {post.title || "Untitled Post"}
                     </h3>
                     <div className="text-gray-600 mt-2">
                       <h2
-                        className="mr-1 max-h-[50vh] overflow-y-auto overflow-x-hidden"
-                        style={{ maxHeight: "50vh" }} // Fallback for older browsers
+                        className="mr-1 w-full overflow-y-auto overflow-x-hidden"
                         dangerouslySetInnerHTML={{
-                          __html:
-                            truncateDescription(post.description || "", 200) ||
-                            "",
+                          __html: truncateDescription(
+                            post.description || "",
+                            200
+                          ),
                         }}
                       ></h2>
                     </div>
                     {post.tags && post.tags.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {post.tags.map((tagItem, tagIndex) => (
-                          <a
-                            key={tagIndex}
-                            href={`/tags/${tagItem}`} // Changed to <a> for simplicity if Link isn't required
+                        {post.tags.map((tagItem) => (
+                          <Link
+                            key={tagItem._id}
+                            to={`/tags/${tagItem.slug}`}
                             className="text-blue-500 text-sm hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            #{tagItem}
-                          </a>
+                            #{tagItem.name}
+                          </Link>
                         ))}
                       </div>
                     )}
@@ -384,213 +243,6 @@ export default function AuthorPage() {
           </div>
         </section>
       </div>
-
-      {/* Edit Profile Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
-            <div className="space-y-4">
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={editedProfile.username}
-                  onChange={(e) =>
-                    setEditedProfile({
-                      ...editedProfile,
-                      username: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={editedProfile.email}
-                  disabled
-                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
-                />
-              </div>
-
-              {/* Avatar */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Avatar
-                </label>
-                <AvatarDropzone
-                  setAvatarFile={setAvatarFile}
-                  setPreview={setPreview}
-                  setAvatarError={setAvatarError}
-                />
-
-                {preview && (
-                  <div className="mt-2 flex items-center gap-4">
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="w-20 h-20 object-cover rounded-full"
-                    />
-                    <button
-                      onClick={handleRemoveAvatar}
-                      className="text-red-500 text-sm hover:underline"
-                    >
-                      Xoá ảnh
-                    </button>
-                  </div>
-                )}
-
-                {avatarError && (
-                  <p className="text-red-500 text-sm mt-1">{avatarError}</p>
-                )}
-              </div>
-
-              {/* Toggle Password */}
-              <div className="mt-4">
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={showChangePassword}
-                    onChange={() => setShowChangePassword((prev) => !prev)}
-                    className="mr-2"
-                  />
-                  Thay đổi mật khẩu
-                </label>
-              </div>
-
-              {/* Change Password Form */}
-              {showChangePassword && (
-                <div className="space-y-4 mt-2">
-                  {passwordErrors.form && (
-                    <p className="text-red-500 text-sm">
-                      {passwordErrors.form}
-                    </p>
-                  )}
-
-                  {/* Current Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Mật khẩu hiện tại
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPass.current ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className={`mt-1 block w-full p-2 border rounded-md ${
-                          passwordErrors.current
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        className="absolute top-2.5 right-3 text-gray-500"
-                        onClick={() =>
-                          setShowPass((p) => ({ ...p, current: !p.current }))
-                        }
-                      >
-                        {showPass.current ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* New Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Mật khẩu mới
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPass.new ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className={`mt-1 block w-full p-2 border rounded-md ${
-                          passwordErrors.new
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        className="absolute top-2.5 right-3 text-gray-500"
-                        onClick={() =>
-                          setShowPass((p) => ({ ...p, new: !p.new }))
-                        }
-                      >
-                        {showPass.new ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    {passwordErrors.new && (
-                      <p className="text-red-500 text-sm">
-                        {passwordErrors.new}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Xác nhận mật khẩu
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPass.confirm ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className={`mt-1 block w-full p-2 border rounded-md ${
-                          passwordErrors.confirm
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        className="absolute top-2.5 right-3 text-gray-500"
-                        onClick={() =>
-                          setShowPass((p) => ({ ...p, confirm: !p.confirm }))
-                        }
-                      >
-                        {showPass.confirm ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    {passwordErrors.confirm && (
-                      <p className="text-red-500 text-sm">
-                        {passwordErrors.confirm}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="mt-6 flex justify-end gap-4">
-                <button
-                  onClick={handleCloseModal}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveProfile}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
