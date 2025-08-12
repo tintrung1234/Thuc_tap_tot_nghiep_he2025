@@ -17,11 +17,22 @@ const ContactPage = () => {
   };
 
   const handleSubmit = async (e) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Bạn chưa đăng nhập");
+    }
     e.preventDefault();
     try {
       const response = await axios.post(
         "http://localhost:5000/api/contact",
-        formData
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setStatus({ type: "success", message: response.data.message });
       setFormData({ fullName: "", email: "", queryRelated: "", message: "" });
@@ -92,9 +103,21 @@ const ContactPage = () => {
           <option value="" disabled>
             Query Related
           </option>
-          <option value="General">General</option>
-          <option value="Support">Support</option>
-          <option value="Sales">Sales</option>
+          <option name="support" value="support">
+            Support
+          </option>
+          <option name="feedback" value="feedback">
+            Feedback
+          </option>
+          <option name="inquiry" value="inquiry">
+            Inquiry
+          </option>
+          <option name="complaint" value="complaint">
+            Complaint
+          </option>
+          <option name="other" value="other">
+            Other
+          </option>
         </select>
         <textarea
           name="message"
