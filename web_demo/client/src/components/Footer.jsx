@@ -1,4 +1,7 @@
 import React from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   FaEnvelope,
   FaMapMarkerAlt,
@@ -10,6 +13,28 @@ import {
 } from "react-icons/fa";
 
 const Footer = () => {
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/categories?page=1&limit=10"
+        );
+        setCategories(res.data.categories);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh mục:", err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryClick = (categorySlug) => {
+    navigate(`/category/${encodeURIComponent(categorySlug)}`);
+  };
+
   return (
     <footer className="bg-gray-900 text-white px-6 py-8">
       {/* Top Left - VFriends Logo */}
@@ -54,30 +79,22 @@ const Footer = () => {
         </div>
         <div>
           <h3 className="text-lg font-semibold mb-4">DANH MỤC</h3>
-          <a
-            href="/category/Startup"
-            className="block text-gray-400 hover:text-white mb-2"
-          >
-            Startup
-          </a>
-          <a
-            href="/category/Business"
-            className="block text-gray-400 hover:text-white mb-2"
-          >
-            Business
-          </a>
-          <a
-            href="/category/Economic"
-            className="block text-gray-400 hover:text-white mb-2"
-          >
-            Economic
-          </a>
-          <a
-            href="/category/Technology"
-            className="block text-gray-400 hover:text-white mb-2"
-          >
-            Technology
-          </a>
+          {/* Dropdown menu */}
+          <div>
+            {categories.length > 0 ? (
+              categories.map((cat) => (
+                <button
+                  key={cat._id}
+                  onClick={() => handleCategoryClick(cat.slug)}
+                  className="block text-gray-400 hover:text-white mb-2"
+                >
+                  {cat.name}
+                </button>
+              ))
+            ) : (
+              <p className="px-4 py-2 text-gray-500">Đang tải...</p>
+            )}
+          </div>
         </div>
         <div>
           <h3 className="text-lg font-semibold mb-4">LIÊN HỆ</h3>

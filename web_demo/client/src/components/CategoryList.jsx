@@ -42,7 +42,6 @@ const CategoryList = () => {
               {/* Icon + Title */}
               <div className="items-center mb-2">
                 <div className="w-[45px] h-[45px] bg-gray-100 flex items-center justify-center mb-3">
-                  {/* Nếu API có ảnh thì hiện ảnh, không thì hiện placeholder */}
                   {category.image ? (
                     <img
                       src={category.image}

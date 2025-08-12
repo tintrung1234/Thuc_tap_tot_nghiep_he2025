@@ -37,8 +37,8 @@ const App = () => {
           <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/tags/:tag" element={<TagPage />} />
-          <Route path="/category/:category" element={<CategoryPage />} />
+          <Route path="/tags/:slug" element={<TagPage />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/write-blog" element={<WriteBlogPage />} />
           <Route path="/detail/:slug" element={<BlogDetail />} />
           <Route path="/author" element={<AuthorPage />} />

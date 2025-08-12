@@ -67,7 +67,7 @@ function BlogPage() {
   };
 
   const handleDetailClick = (slug) => {
-    navigate(`/detail/${slug}`);
+    navigate(`/detail/${encodeURIComponent(slug)}`);
   };
 
   const truncateDescription = (html, maxLength) => {

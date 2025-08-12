@@ -73,8 +73,8 @@ export default function HomePage() {
     getTopPost();
   }, []);
 
-  const handleDetailClick = (_id) => {
-    navigate(`/detail/${encodeURIComponent(_id)}`);
+  const handleDetailClick = (slug) => {
+    navigate(`/detail/${encodeURIComponent(slug)}`);
   };
 
   const handleClick = () => {

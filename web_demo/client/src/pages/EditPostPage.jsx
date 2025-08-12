@@ -4,7 +4,6 @@ import "quill/dist/quill.snow.css";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Editor from "../components/Editor";
-import UserAva from "../assets/UserAva.jpg";
 import shuttle from "../assets/shuttle.png";
 import business from "../assets/business.png";
 import economy from "../assets/economy.png";
@@ -160,7 +159,7 @@ const EditPostPage = () => {
               <div className="flex-col">
                 <div className="flex items-center w-full">
                   <img
-                    src={profile?.photoUrl || UserAva}
+                    src={profile?.photoUrl}
                     alt="useravatar"
                     className="h-[75px] w-[73px] rounded-full mr-4"
                   />

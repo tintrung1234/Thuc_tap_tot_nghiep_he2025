@@ -7,7 +7,6 @@ import RequireAuth from "../middleware/RequireAuth";
 import { generateText } from "../services/AiService";
 import ImagePostDropzone from "../components/ImagePostDropzone";
 import "../style/css/style.css";
-import UserAva from "../assets/UserAva.jpg";
 import shuttle from "../assets/shuttle.png";
 import business from "../assets/business.png";
 import economy from "../assets/economy.png";
@@ -76,7 +75,7 @@ export default function WriteBlogPage() {
     const user = JSON.parse(localStorage.getItem("user"));
     if (token && user?.uid) {
       axios
-        .get(`http://localhost:5000/api/users/profile/${user.uid}`, {
+        .get(`http://localhost:5000/api/users/${user.uid}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((response) => {
@@ -206,7 +205,7 @@ export default function WriteBlogPage() {
                 <div className="flex-col">
                   <div className="flex items-center w-full">
                     <img
-                      src={UserAva}
+                      src={""}
                       alt="useravatar"
                       className="h-[75px] w-[73px] rounded-full mr-4"
                     />

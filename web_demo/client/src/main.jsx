@@ -6,7 +6,7 @@ import "aos/dist/aos.css";
 import AOS from "aos";
 
 AOS.init({
-  duration: 600,
+  duration: 800,
   easing: "ease-in-out",
   once: false, // Animate only once when scrolled into view
   offset: 100, // Trigger animation 100px before element is in view

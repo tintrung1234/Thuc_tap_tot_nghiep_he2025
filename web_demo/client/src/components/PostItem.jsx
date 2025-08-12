@@ -21,7 +21,7 @@ const PostItem = ({ post }) => {
         alt={post.title}
         className="w-1/3 h-60 object-cover "
       />
-      <div className="p-6 w-2/3">
+      <div className="p-8 w-2/3">
         <span className="text-purple-600 tracking-widest font-semibold text-sm text-transform: uppercase">
           {post.category.name}
         </span>

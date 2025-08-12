@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaSearch, FaBars, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const NavBar = () => {
   const [showInput, setShowInput] = useState(false);
@@ -9,6 +10,7 @@ const NavBar = () => {
   const wrapperRef = useRef(null);
   const navigate = useNavigate();
   const searchInputRef = useRef(null);
+  const [categories, setCategories] = useState([]);
 
   //Tự động mở bàn phím khi mở search box
   useEffect(() => {
@@ -44,6 +46,25 @@ const NavBar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(
+          "http://localhost:5000/api/categories?page=1&limit=10"
+        );
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh mục:", err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryClick = (categorySlug) => {
+    navigate(`/category/${encodeURIComponent(categorySlug)}`);
+  };
+
   return (
     <nav className="bg-gray-900 text-white px-6 py-4">
       <div className="flex items-center justify-between">
@@ -71,6 +92,29 @@ const NavBar = () => {
           >
             BLOG
           </a>
+          <div className="relative group ">
+            {/* Nút chính */}
+            <button className="hover:text-gray-300 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-0 after:h-0.5 after:bg-gray-300 after:transition-all after:duration-300 group-hover:after:left-0 group-hover:after:w-full">
+              DANH MỤC
+            </button>
+
+            {/* Dropdown menu */}
+            <div className="absolute left-0 top-full w-32 bg-white border rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <button
+                    key={cat._id}
+                    onClick={() => handleCategoryClick(cat.slug)}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  >
+                    {cat.name}
+                  </button>
+                ))
+              ) : (
+                <p className="px-4 py-2 text-gray-500">Đang tải...</p>
+              )}
+            </div>
+          </div>
           <a
             href="/about-us"
             className="hover:text-gray-300 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-0 after:h-0.5 after:bg-gray-300 after:transition-all after:duration-300 hover:after:left-0 hover:after:w-full"
@@ -154,6 +198,29 @@ const NavBar = () => {
           >
             BLOG
           </a>
+          <div className="relative group ">
+            {/* Nút chính */}
+            <button className="hover:text-gray-300 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-0 after:h-0.5 after:bg-gray-300 after:transition-all after:duration-300 group-hover:after:left-0 group-hover:after:w-full">
+              DANH MỤC
+            </button>
+
+            {/* Dropdown menu */}
+            <div className="absolute left-0 top-full w-32 bg-white border rounded-lg shadow-lg z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <button
+                    key={cat._id}
+                    onClick={() => handleCategoryClick(cat.slug)}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  >
+                    {cat.name}
+                  </button>
+                ))
+              ) : (
+                <p className="px-4 py-2 text-gray-500">Đang tải...</p>
+              )}
+            </div>
+          </div>
           <a
             href="/about-us"
             className="hover:text-gray-300 relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:w-0 after:h-0.5 after:bg-gray-300 after:transition-all after:duration-300 hover:after:left-0 hover:after:w-full"
