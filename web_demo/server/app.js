@@ -13,6 +13,7 @@ const commentRoutes = require("./routes/commentRoutes");
 const shareRoutes = require("./routes/shareRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const auditLogRoutes = require("./routes/auditLogRoutes");
+const statsRoutes = require("./routes/statsRoutes");
 
 const app = express();
 app.use(cors());
@@ -32,5 +33,6 @@ app.use("/api/shares", shareRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
+app.use("/api/stats", statsRoutes);
 
 module.exports = app;
