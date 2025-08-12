@@ -40,7 +40,7 @@ const App = () => {
           <Route path="/tags/:tag" element={<TagPage />} />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/write-blog" element={<WriteBlogPage />} />
-          <Route path="/detail/:id" element={<BlogDetail />} />
+          <Route path="/detail/:slug" element={<BlogDetail />} />
           <Route path="/author" element={<AuthorPage />} />
           <Route path="/not-found-page" element={<NotFoundPage />} />
         </Route>

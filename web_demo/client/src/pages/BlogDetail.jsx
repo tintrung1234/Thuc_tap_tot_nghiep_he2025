@@ -1,86 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import UserAva from "../assets/UserAva.jpg";
 import axios from "axios";
 import BlogDetailSkeleton from "../components/BlogDetailSkeleton";
 import { toast } from "react-toastify";
 
 export default function BlogDetail() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    const fetchPostById = async () => {
+    const fetchPostBySlug = async () => {
       setLoading(true);
       setError(false);
       try {
-        const token = localStorage.getItem("token");
-        const config = token
-          ? { headers: { Authorization: `Bearer ${token}` } }
-          : {};
         const response = await axios.get(
-          `http://localhost:5000/api/posts/detail/${encodeURIComponent(id)}`,
-          config
+          `http://localhost:5000/api/posts/${slug}`
         );
         setPost(response.data);
       } catch (error) {
         toast.error("Không thể tải bài viết. Vui lòng thử lại sau!");
-        console.error("Error fetching post by id:", error);
+        console.error("Error fetching post by slug:", error);
         setError(true);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPostById();
-  }, [id]);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (token && user?.uid) {
-        try {
-          const response = await axios.get(
-            `http://localhost:5000/api/users/${user.uid}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          setProfile(response.data);
-        } catch (error) {
-          toast.error("Không thể tải thông tin tài khoản!");
-          console.error("Error fetching profile:", error);
-        }
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
-
-  useEffect(() => {
-    const getUserName = async () => {
-      if (!post || !post.uid) return;
-      try {
-        const token = localStorage.getItem("token");
-        const config = token
-          ? { headers: { Authorization: `Bearer ${token}` } }
-          : {};
-        const response = await axios.get(
-          `http://localhost:5000/api/users/${post.uid}`,
-          config
-        );
-        setUserName(response.data.username);
-      } catch (error) {
-        toast.error("Không thể tải thông tin người dùng!");
-        console.error("Error fetching user:", error);
-      }
-    };
-
-    getUserName();
-  }, [post]);
+    fetchPostBySlug();
+  }, [slug]);
 
   if (loading) {
     return <BlogDetailSkeleton />;
@@ -94,8 +43,6 @@ export default function BlogDetail() {
     );
   }
 
-  const { category, title, description, createdAt, imageUrl, tags } = post;
-
   return (
     <div
       className="max-w-4xl mx-auto my-10 px-6 py-10 bg-purple border border-black shadow-md"
@@ -107,7 +54,7 @@ export default function BlogDetail() {
       <div className="flex items-center space-x-3">
         <img
           src={
-            profile?.photoUrl ||
+            post.uid.photoUrl ||
             "https://res.cloudinary.com/daeorkmlh/image/upload/v1750775424/avatar-trang-4_jjrbuu.jpg"
           }
           alt="Author Avatar"
@@ -115,17 +62,17 @@ export default function BlogDetail() {
         />
         <div>
           <p className="text-blue-600 font-semibold text-sm">
-            {userName || "Tác giả không xác định"}
+            {post.uid.username || "Tác giả không xác định"}
           </p>
           <p className="text-gray-500 text-xs">
-            Đăng ngày {new Date(createdAt).toLocaleDateString("vi-VN")}
+            Đăng ngày {new Date(post.createdAt).toLocaleDateString("vi-VN")}
           </p>
         </div>
       </div>
 
       {/* Tiêu đề bài viết */}
       <h1 className="text-2xl md:text-3xl font-extrabold leading-tight mt-4 text-gray-900">
-        {title}
+        {post.title}
       </h1>
 
       {/* Category */}
@@ -133,21 +80,21 @@ export default function BlogDetail() {
         <span role="img" aria-label="emoji">
           🎯
         </span>
-        <span>{category?.name || category}</span>
+        <span>{post.category?.name}</span>
       </div>
 
       {/* Tags */}
       <div className="text-gray-700 font-medium flex items-center space-x-1">
-        {tags && tags.length > 0 && (
+        {post.tags && post.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {tags.map((tagItem, tagIndex) => (
+            {post.tags.map((tagItem) => (
               <Link
-                key={tagIndex}
-                to={`/tags/${tagItem}`}
+                key={tagItem._id}
+                to={`/tags/${tagItem.slug}`}
                 className="text-blue-500 text-sm hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                #{tagItem.name || tagItem}
+                #{tagItem.name}
               </Link>
             ))}
           </div>
@@ -157,17 +104,33 @@ export default function BlogDetail() {
       {/* Ảnh minh họa */}
       <div className="my-5">
         <img
-          src={imageUrl}
+          src={post.imageUrl}
           alt="Blog Illustration"
-          className="w-full rounded-md object-cover"
+          className="w-full h-[60vh] rounded-md object-cover"
         />
       </div>
 
-      {/* Nội dung HTML từ Editor */}
-      <div
-        className="text-gray-800 leading-relaxed text-[15px] space-y-4"
-        dangerouslySetInnerHTML={{ __html: description }}
-      />
+      {/* Nội dung description */}
+      <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+        <h3 className="text-lg font-semibold text-yellow-700 mb-2">
+          📝 Tóm tắt bài viết
+        </h3>
+        <div
+          className="text-gray-800 leading-relaxed text-[15px] space-y-3"
+          dangerouslySetInnerHTML={{ __html: post.description }}
+        />
+      </div>
+
+      {/* Nội dung content */}
+      <div>
+        <h3 className="text-lg font-semibold text-purple-700 mb-3">
+          📖 Nội dung chi tiết
+        </h3>
+        <div
+          className="text-gray-800 leading-loose text-[16px] space-y-4"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
+      </div>
     </div>
   );
 }

@@ -47,12 +47,13 @@ const AboutUsPage = () => {
 
       {/* Mission and Vision Section */}
       <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-gray-100 p-8 rounded-lg mb-12 "
+        className="grid grid-cols-1 md:grid-cols-2 gap-12 rounded-lg mb-12"
         data-aos="fade-up"
       >
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            OUR MISSION
+        {/* OUR MISSION */}
+        <div className="bg-blue-50 p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-blue-700 mb-4 flex items-center gap-2">
+            🚀 OUR MISSION
           </h2>
           <h3 className="text-xl font-bold text-gray-900">
             Creating valuable content for creatives all around the world
@@ -64,9 +65,11 @@ const AboutUsPage = () => {
             At risus viverra adipiscing at in tellus.
           </p>
         </div>
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            OUR VISION
+
+        {/* OUR VISION */}
+        <div className="bg-green-50 p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold text-green-700 mb-4 flex items-center gap-2">
+            🌟 OUR VISION
           </h2>
           <h3 className="text-xl font-bold text-gray-900">
             A platform that empowers individuals to improve

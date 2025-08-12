@@ -11,7 +11,7 @@ import AuthorsList from "../components/AuthorsList";
 import AI_image from "../assets/AI_robot.png";
 import bannerImg from "../assets/banner.png";
 
-function HomePage() {
+export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [topPost, setTopPost] = useState(null);
@@ -96,7 +96,7 @@ function HomePage() {
     return (
       <div className="max-w-[80vw] mx-auto px-6 py-8">
         <TopPostSkeleton />
-        <BlogSkeleton count={3} />
+        <BlogSkeleton count={5} />
       </div>
     );
   }
@@ -130,8 +130,7 @@ function HomePage() {
           </h2>
         </div>
         <h2
-          className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto"
-          style={{ maxHeight: "50vh" }} // Fallback for older browsers
+          className="mr-1 w-[60vw] overflow-y-auto"
           dangerouslySetInnerHTML={{
             __html: truncateDescription(topPost?.description || "", 200) || "",
           }}
@@ -140,7 +139,7 @@ function HomePage() {
         <button
           className="text-black bg-yellow-500 hover:bg-yellow-600 px-4 py-2 font-bold mt-10"
           onClick={() => {
-            handleDetailClick(topPost._id);
+            handleDetailClick(topPost.slug);
           }}
         >
           READ MORE {">"}
@@ -175,7 +174,7 @@ function HomePage() {
                   </div>
                   <h3 className="text-xl font-bold mb-2">{post?.title}</h3>
                   <h2
-                    className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto mt-2 mb-4"
+                    className="mr-1 w-full overflow-y-auto mt-2 mb-4"
                     dangerouslySetInnerHTML={{
                       __html:
                         truncateDescription(post?.description || "", 200) || "",
@@ -184,7 +183,7 @@ function HomePage() {
                   <button
                     className="bg-yellow-300 text-black px-4 py-2 font-semibold hover:bg-yellow-400"
                     onClick={() => {
-                      handleDetailClick(post._id);
+                      handleDetailClick(post.slug);
                     }}
                   >
                     Xem thêm {">"}
@@ -203,7 +202,9 @@ function HomePage() {
             data-aos-easing="ease-in-out"
           >
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-2xl font-bold">Bài viết mới nhất</h2>
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                Bài viết mới nhất
+              </h2>
               <a
                 href="/blog"
                 className="text-purple-600 text-sm hover:underline transition duration-200"
@@ -211,27 +212,31 @@ function HomePage() {
                 Xem tất cả {">"}
               </a>
             </div>
-
-            {posts.map((post) => (
-              <div
-                key={post._id}
-                className="px-3 py-5 mb-3 cursor-pointer hover:bg-yellow-50"
-                onClick={() => {
-                  handleDetailClick(post._id);
-                }}
-              >
-                <div className="text-sm text-gray-600 mb-1">
-                  By{" "}
-                  <span className="text-indigo-600">
-                    {post?.uid?.username || "Tác giả không xác định"}
-                  </span>{" "}
-                  | {new Date(post.createdAt).toLocaleDateString("vi-VN")}
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <div
+                  key={post._id}
+                  className="p-4 rounded-lg shadow-md bg-white hover:shadow-lg hover:scale-[1.01] transition cursor-pointer border-l-4 border-yellow-200"
+                  onClick={() => {
+                    handleDetailClick(post.slug);
+                  }}
+                >
+                  <div className="flex items-center text-xs text-gray-500 mb-2">
+                    <span className="mr-1"> By </span>
+                    <span className="text-indigo-600 font-medium">
+                      {post?.uid?.username || "Tác giả không xác định"}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>
+                      {new Date(post.createdAt).toLocaleDateString("vi-VN")}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-gray-800 line-clamp-2">
+                    {post?.title}
+                  </h3>
                 </div>
-                <p className="font-bold text-sm">
-                  <span className="italic">{post?.title}</span>
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -382,5 +387,3 @@ function HomePage() {
     </div>
   );
 }
-
-export default HomePage;

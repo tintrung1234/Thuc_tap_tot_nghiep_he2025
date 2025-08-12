@@ -53,7 +53,7 @@ export default function AuthorPage() {
       if (token && userData?.uid) {
         try {
           const profileResponse = await axios.get(
-            `http://localhost:3000/api/users/profile/${userData.uid}`,
+            `http://localhost:5000/api/users/profile/${userData.uid}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           setUser(userData);
@@ -86,7 +86,7 @@ export default function AuthorPage() {
   const fetchUserPosts = async (uid, token) => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/posts/user/${uid}`,
+        `http://localhost:5000/api/posts/user/${uid}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setPosts(response.data);
@@ -125,7 +125,7 @@ export default function AuthorPage() {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/api/users/profile/${userData.uid}`,
+        `http://localhost:5000/api/users/profile/${userData.uid}`,
         formData,
         {
           headers: {
@@ -192,7 +192,7 @@ export default function AuthorPage() {
 
     try {
       await axios.post(
-        `http://localhost:3000/api/users/change-password`,
+        `http://localhost:5000/api/users/change-password`,
         { currentPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
