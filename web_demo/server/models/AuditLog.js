@@ -34,7 +34,6 @@ const auditLogSchema = new mongoose.Schema(
       ],
       index: true,
     },
-    // resourceId: { type: String, required: true, index: true },
     resourceId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,

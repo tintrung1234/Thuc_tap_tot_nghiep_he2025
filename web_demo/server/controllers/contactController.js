@@ -2,13 +2,14 @@ const ContactService = require("../services/ContactService");
 
 const createContact = async (req, res) => {
   try {
-    const { subject, message } = req.body;
-    const { uid, username } = req.user;
+    const { fullName, email, queryRelated, message } = req.body;
+    const { uid } = req.user;
     const contact = await ContactService.createContact({
       userId: uid,
-      username,
-      subject,
-      message,
+      fullName: fullName,
+      email: email,
+      queryRelated: queryRelated,
+      message: message,
     });
     res.status(201).json(contact);
   } catch (error) {

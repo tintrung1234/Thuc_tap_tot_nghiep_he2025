@@ -32,12 +32,19 @@ class ContactService {
     return contact;
   }
 
-  static async createContact({ userId, username, subject, message }) {
+  static async createContact({
+    userId,
+    fullName,
+    email,
+    queryRelated,
+    message,
+  }) {
     const contact = new Contact({
       userId,
-      subject,
+      fullName,
+      email,
+      queryRelated,
       message,
-      status: "pending",
     });
     await contact.save();
 
@@ -46,7 +53,7 @@ class ContactService {
       action: "create",
       resource: "Contact",
       resourceId: contact._id,
-      details: `Created contact request: ${subject}`,
+      details: `Created contact request: ${queryRelated}`,
     });
 
     const admins = await User.find({ role: "Admin", isDeleted: false });
@@ -54,11 +61,11 @@ class ContactService {
       userId: admin.uid,
       type: "contact_created",
       relatedId: contact._id,
-      message: `${username} submitted a new contact request: ${subject}`,
+      message: `${fullName} submitted a new contact request: ${queryRelated}`,
     }));
     await Notification.insertMany(notifications);
 
-    return contact;
+    return { contact, message: "Successfull" };
   }
 
   static async updateContactStatus({ contactId, status, userId, userRole }) {
@@ -123,7 +130,7 @@ class ContactService {
   }
 
   static async getContactsByUser({ userId, page = 1, limit = 10 }) {
-    const user = await User.findOne({ uid: userId, isDeleted: false });
+    const user = await User.findOne({ _id: userId, isDeleted: false });
     if (!user) throw new Error("User not found");
 
     const skip = (page - 1) * limit;

@@ -26,29 +26,56 @@ const login = async (req, res) => {
 const getUser = async (req, res) => {
   try {
     const { uid } = req.params;
-    const user = await UserService.getUser(uid);
+    const user = await UserService.getUserById(uid);
     res.json(user);
   } catch (error) {
     res.status(404).json({ error: error.message });
   }
 };
 
-const updateUser = async (req, res) => {
+const updateUser = async (req, res, next) => {
   try {
     const { uid } = req.params;
-    const { username, bio, social } = req.body;
     const file = req.file;
+
+    const updateData = {
+      username: req.body.username,
+      bio: req.body.bio,
+      social: req.body.social,
+      removeAvatar: req.body.removeAvatar,
+    };
+
     const user = await UserService.updateUser({
       uid,
-      username,
-      bio,
-      social,
+      updateData,
       file,
-      currentUser: req.user,
     });
-    res.json(user);
+    res.status(200).json({ user, message: "Cập nhật thông tin thành công" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    next(error);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { uid } = req.user;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw createError(
+        400,
+        "Vui lòng cung cấp đầy đủ mật khẩu hiện tại và mật khẩu mới"
+      );
+    }
+
+    const result = await userService.changePassword(
+      uid,
+      currentPassword,
+      newPassword
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -109,4 +136,5 @@ module.exports = {
   getAllUsers,
   softDeleteUser,
   restoreUser,
+  changePassword,
 };

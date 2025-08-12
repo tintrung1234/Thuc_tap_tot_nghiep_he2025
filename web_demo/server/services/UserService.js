@@ -26,9 +26,9 @@ class UserService {
     await user.save();
 
     const token = jwt.sign(
-      { uid: user.uid, role: user.role },
+      { uid: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1h" }
     );
 
     await AuditLog.logAction({
@@ -39,7 +39,10 @@ class UserService {
       details: `Registered new user: ${username}`,
     });
 
-    return { user: { uid: user.uid, email, username, role: user.role }, token };
+    return {
+      user: { id: user._id, uid: user.uid, email, username, role: user.role },
+      token,
+    };
   }
 
   static async login({ email, password }) {
@@ -57,9 +60,9 @@ class UserService {
     await user.save();
 
     const token = jwt.sign(
-      { uid: user.uid, role: user.role },
+      { uid: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1h" }
     );
 
     await AuditLog.logAction({
@@ -71,32 +74,66 @@ class UserService {
     });
 
     return {
-      user: { uid: user.uid, email, username: user.username, role: user.role },
+      user: {
+        id: user._id,
+        uid: user.uid,
+        email,
+        username: user.username,
+        role: user.role,
+      },
       token,
     };
   }
 
-  static async getUser(uid) {
-    const user = await User.findOne({ uid, isDeleted: false }, "-password");
-    if (!user) throw new Error("User not found");
+  static async getUserById(uid) {
+    const user = await User.findOne({ uid, isDeleted: false }).select(
+      "-password -resetPasswordToken -resetPasswordExpires"
+    );
+    if (!user) {
+      throw createError(404, "Người dùng không tồn tại");
+    }
     return user;
   }
 
-  static async updateUser({ uid, username, bio, social, file, currentUser }) {
-    if (currentUser.uid !== uid && currentUser.role !== "Admin") {
-      throw new Error("Unauthorized");
-    }
-
+  static async updateUser(uid, updateData, file) {
     const user = await User.findOne({ uid, isDeleted: false });
     if (!user) throw new Error("User not found");
 
-    if (username) user.username = username;
-    if (bio) user.bio = bio;
-    if (social) user.social = { ...user.social, ...social };
+    // Handle username update and validation
+    if (updateData.username && updateData.username !== user.username) {
+      const usernameExists = await User.findOne({
+        username: updateData.username,
+        isDeleted: false,
+      });
+      if (usernameExists) {
+        throw createError(400, "Tên người dùng đã tồn tại");
+      }
+      user.username = updateData.username;
+    }
+
+    // Handle bio update
+    if (updateData.bio !== undefined) {
+      user.bio = updateData.bio;
+    }
+
+    // Handle social links update
+    if (updateData.social) {
+      try {
+        const social = JSON.parse(updateData.social);
+        user.social = {
+          facebook: social.facebook || user.social.facebook,
+          twitter: social.twitter || user.social.twitter,
+          instagram: social.instagram || user.social.instagram,
+          linkedin: social.linkedin || user.social.linkedin,
+        };
+      } catch (error) {
+        throw createError(400, "Dữ liệu mạng xã hội không hợp lệ");
+      }
+    }
 
     if (file) {
       const result = await cloudinary.uploader.upload(file.path, {
-        folder: "user_photos",
+        folder: "photo",
         public_id: `user_${uid}_${Date.now()}`,
       });
       user.photoUrl = result.secure_url;
@@ -104,6 +141,12 @@ class UserService {
       await fs.unlink(file.path); // Xóa file tạm
     }
 
+    if (updateData.removeAvatar === "true") {
+      user.photoUrl = "";
+      user.publicId = "";
+    }
+
+    user.updatedAt = Date.now();
     await user.save();
 
     await AuditLog.logAction({
@@ -115,6 +158,25 @@ class UserService {
     });
 
     return user;
+  }
+
+  static async changePassword(uid, currentPassword, newPassword) {
+    const user = await User.findOne({ uid, isDeleted: false }).select(
+      "+password"
+    );
+    if (!user) {
+      throw createError(404, "Người dùng không tồn tại");
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw createError(400, "Mật khẩu hiện tại không đúng");
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.updatedAt = Date.now();
+    await user.save();
+    return { message: "Đổi mật khẩu thành công" };
   }
 
   static async getRecentUsers() {

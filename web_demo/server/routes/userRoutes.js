@@ -27,9 +27,10 @@ router.get("/:uid", authMiddleware, userController.getUser);
 router.put(
   "/:uid",
   authMiddleware,
-  upload.single("photo"),
+  // upload.single("photo"),
   userController.updateUser
 );
+router.post("/change-password", authMiddleware, userController.changePassword);
 router.delete("/:uid", authMiddleware, userController.softDeleteUser);
 
 module.exports = router;
