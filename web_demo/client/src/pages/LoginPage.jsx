@@ -1,5 +1,5 @@
-import banner from "../assets/banner_register.png";
 import "../style/css/style.css";
+import banner from "../assets/banner_register.png";
 import ic_register from "../assets/ic_register.png";
 import ic_google from "../assets/ic_google.png";
 import ic_fb from "../assets/ic_facebook.png";

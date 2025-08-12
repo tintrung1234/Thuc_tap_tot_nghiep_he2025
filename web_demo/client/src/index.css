@@ -39,3 +39,10 @@
 .bg-purple {
     background-color: #F4F0F8;
 }
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-password-toggle {
+    display: none;
+}
