@@ -6,16 +6,6 @@ const multer = require("multer");
 
 const upload = multer({
   dest: "uploads/",
-  limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB
-  },
-  fileFilter: (req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.mimetype)) {
-      return cb(new Error("Định dạng ảnh không hợp lệ"), false);
-    }
-    cb(null, true);
-  },
 });
 
 router.post("/register", userController.register);
@@ -27,7 +17,7 @@ router.get("/:uid", authMiddleware, userController.getUser);
 router.put(
   "/:uid",
   authMiddleware,
-  // upload.single("photo"),
+  upload.single("photo"),
   userController.updateUser
 );
 router.post("/change-password", authMiddleware, userController.changePassword);

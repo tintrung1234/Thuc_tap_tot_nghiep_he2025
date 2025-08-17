@@ -5,6 +5,7 @@ const fs = require("fs").promises;
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
+const createError = require("http-errors");
 
 class UserService {
   static async register({ email, username, password }) {
@@ -95,7 +96,7 @@ class UserService {
     return user;
   }
 
-  static async updateUser(uid, updateData, file) {
+  static async updateUser({ uid, updateData, file }) {
     const user = await User.findOne({ uid, isDeleted: false });
     if (!user) throw new Error("User not found");
 
@@ -133,24 +134,21 @@ class UserService {
 
     if (file) {
       const result = await cloudinary.uploader.upload(file.path, {
-        folder: "photo",
-        public_id: `user_${uid}_${Date.now()}`,
+        folder: "avatar",
       });
       user.photoUrl = result.secure_url;
-      user.publicId = result.public_id;
       await fs.unlink(file.path); // Xóa file tạm
     }
 
     if (updateData.removeAvatar === "true") {
       user.photoUrl = "";
-      user.publicId = "";
     }
 
     user.updatedAt = Date.now();
     await user.save();
 
     await AuditLog.logAction({
-      userId: currentUser.uid,
+      userId: user._id,
       action: "update",
       resource: "User",
       resourceId: user._id,
@@ -161,7 +159,7 @@ class UserService {
   }
 
   static async changePassword(uid, currentPassword, newPassword) {
-    const user = await User.findOne({ uid, isDeleted: false }).select(
+    const user = await User.findOne({ _id: uid, isDeleted: false }).select(
       "+password"
     );
     if (!user) {

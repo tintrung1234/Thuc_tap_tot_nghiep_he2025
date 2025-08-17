@@ -266,15 +266,13 @@ class PostService {
   }
 
   static async getPostsByUser({ uid, page = 1, limit = 10 }) {
-    const userObjectId = new mongoose.Types.ObjectId(uid);
-
     // Kiểm tra user tồn tại
-    const user = await User.findOne({ _id: userObjectId, isDeleted: false });
+    const user = await User.findOne({ uid: uid, isDeleted: false });
     if (!user) throw new Error("User not found");
 
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ uid: userObjectId, isDeleted: false })
+    const posts = await Post.find({ uid: user._id, isDeleted: false })
       .populate("category", "name slug")
       .populate("tags", "name slug")
       .populate("uid", "name email")
@@ -286,7 +284,7 @@ class PostService {
       );
 
     const total = await Post.countDocuments({
-      uid: userObjectId,
+      uid: user._id,
       isDeleted: false,
     });
 
