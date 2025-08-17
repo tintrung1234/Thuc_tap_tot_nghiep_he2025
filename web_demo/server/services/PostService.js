@@ -30,27 +30,30 @@ class PostService {
     return { posts, total, page, limit };
   }
 
-  static async searchPosts({ query, page = 1, limit = 10 }) {
-    const skip = (page - 1) * limit;
-    const posts = await Post.find(
-      { $text: { $search: query }, status: "published", isDeleted: false },
-      { score: { $meta: "textScore" } }
-    )
-      .populate("category", "name slug")
-      .populate("uid", "username")
-      .populate("tags", "name slug")
-      .sort({ score: { $meta: "textScore" } })
-      .skip(skip)
-      .limit(limit)
-      .select(
-        "title slug content description imageUrl category tags views createdAt"
-      );
-    const total = await Post.countDocuments({
-      $text: { $search: query },
-      status: "published",
-      isDeleted: false,
-    });
-    return { posts, total, page, limit };
+  static async searchPosts({ q, category, tags }) {
+    let query = { isDeleted: false, status: "published" };
+
+    if (q) {
+      query.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { description: { $regex: q, $options: "i" } },
+        { content: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (tags) {
+      query.tags = { $in: [tags] };
+    }
+
+    const posts = await Post.find(query)
+      .populate("category", "_id name slug")
+      .populate("tags", "_id name slug")
+      .populate("uid", "_id username photoUrl");
+    return posts;
   }
 
   static async getPostsByCategory({ categorySlug, page = 1, limit = 10 }) {
