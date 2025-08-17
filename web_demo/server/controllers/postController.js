@@ -1,7 +1,4 @@
 const PostService = require("../services/PostService");
-const multer = require("multer");
-
-const upload = multer({ dest: "uploads/" });
 
 const getAllPosts = async (req, res) => {
   try {
@@ -102,18 +99,22 @@ const getRecentPosts = async (req, res) => {
 
 const createPost = async (req, res) => {
   try {
-    const { title, description, content, categoryId, tags } = req.body;
-    const file = req.file;
-    const { uid, username } = req.user;
+    const { uid, title, description, content, category } = req.body;
+    const tags = req.body.tags
+      ? Array.isArray(req.body.tags)
+        ? req.body.tags
+        : [req.body.tags]
+      : [];
+    const image = req.file;
+
     const post = await PostService.createPost({
+      uid,
       title,
       description,
       content,
-      categoryId,
+      category,
       tags,
-      file,
-      userId: uid,
-      username,
+      image,
     });
     res.status(201).json(post);
   } catch (error) {
@@ -139,21 +140,19 @@ const getPostsByUser = async (req, res) => {
 const updatePost = async (req, res) => {
   try {
     const { slug } = req.params;
-    const { title, description, content, categoryId, tags } = req.body;
-    const file = req.file;
-    const { uid, role } = req.user;
-    const post = await PostService.updatePost({
+    const { title, description, content, category } = req.body;
+    const tags = req.body.tags
+      ? Array.isArray(req.body.tags)
+        ? req.body.tags
+        : [req.body.tags]
+      : [];
+    const image = req.file;
+    const post = await PostService.updatePost(
       slug,
-      title,
-      description,
-      content,
-      categoryId,
-      tags,
-      file,
-      userId: uid,
-      currentUser: req.user,
-    });
-    res.json(post);
+      { title, description, content, category, tags, image },
+      req.user
+    );
+    res.status(200).json({ post, message: "Cập nhật bài viết thành công" });
   } catch (error) {
     res.status(403).json({ error: error.message });
   }
@@ -183,8 +182,8 @@ module.exports = {
   getTopPost,
   getFeaturedPosts,
   getRecentPosts,
-  createPost: [upload.single("image"), createPost],
+  createPost,
   getPostsByUser,
-  updatePost: [upload.single("image"), updatePost],
+  updatePost,
   softDeletePost,
 };

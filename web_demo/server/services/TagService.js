@@ -24,7 +24,7 @@ class TagService {
     return tag;
   }
 
-  static async createTag({ name, description, userId, username }) {
+  static async createTag({ name, description, userId }) {
     const existingTag = await Tag.findOne({ name, isDeleted: false });
     if (existingTag) throw new Error("Tag name already exists");
 
@@ -38,6 +38,7 @@ class TagService {
     const tag = new Tag({ name, slug, description });
     await tag.save();
 
+    const user = await User.findOne({ _id: userId, isDeleted: false });
     await AuditLog.logAction({
       userId,
       action: "create",
@@ -51,7 +52,7 @@ class TagService {
       userId: admin.uid,
       type: "tag_created",
       relatedId: tag._id,
-      message: `${username} created a new tag: ${name}`,
+      message: `${user.username} created a new tag: ${name}`,
     }));
     await Notification.insertMany(notifications);
 

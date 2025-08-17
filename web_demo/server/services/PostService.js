@@ -7,6 +7,7 @@ const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
 const Share = require("../models/Share");
 const cloudinary = require("../config/cloudinary");
+const createError = require("http-errors");
 
 class PostService {
   static async getAllPosts({ page = 1, limit = 10 }) {
@@ -178,53 +179,74 @@ class PostService {
   }
 
   static async createPost({
+    uid,
     title,
     description,
     content,
-    categoryId,
-    tagIds,
-    file,
-    userId,
-    username,
+    category,
+    tags,
+    image,
   }) {
-    const category = await Category.findOne({
-      _id: categoryId,
+    // Validate required fields
+    if (!uid || !title || !description || !content || !category) {
+      throw createError(400, "Vui lòng cung cấp đầy đủ các trường bắt buộc");
+    }
+
+    // Validate user
+    const user = await User.findOne({ _id: uid, isDeleted: false });
+    if (!user) {
+      throw createError(404, "Người dùng không tồn tại");
+    }
+
+    const categoryDocs = await Category.findOne({
+      _id: category,
       isDeleted: false,
     });
-    if (!category) throw new Error("Invalid or deleted category");
+    if (!categoryDocs) throw new Error("Invalid or deleted category");
 
-    const tags = await Tag.find({ _id: { $in: tagIds }, isDeleted: false });
-    if (tags.length !== tagIds.length)
-      throw new Error("One or more tags are invalid or deleted");
+    // Validate tags
+    if (tags && tags.length > 0) {
+      const tagDocs = await Tag.find({ _id: { $in: tags }, isDeleted: false });
+      if (tagDocs.length !== tags.length) {
+        throw createError(400, "Một hoặc nhiều tag không hợp lệ");
+      }
+    }
 
     const slug = title
       .toLowerCase()
       .replace(/ /g, "-")
       .replace(/[^\w-]+/g, "");
-    const postData = {
-      uid: userId,
+
+    // Handle image upload
+    let imageUrl = "";
+    if (image) {
+      try {
+        const result = await cloudinary.uploader.upload(image.path, {
+          folder: "posts",
+        });
+        imageUrl = result.secure_url;
+      } catch (error) {
+        throw createError(500, "Lỗi khi tải lên hình ảnh");
+      }
+    }
+
+    // Create post
+    const post = new Post({
+      uid,
       title,
       slug,
       description,
       content,
-      category: categoryId,
-      tags: tagIds,
+      category,
+      tags: tags || [],
+      imageUrl,
       status: "published",
-    };
+    });
 
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: "post_images",
-        public_id: `post_${slug}_${Date.now()}`,
-      });
-      postData.imageUrl = result.secure_url;
-    }
-
-    const post = new Post(postData);
     await post.save();
 
     await AuditLog.logAction({
-      userId,
+      uid,
       action: "create",
       resource: "Post",
       resourceId: post._id,
@@ -236,7 +258,7 @@ class PostService {
       userId: admin.uid,
       type: "post_created",
       relatedId: post._id,
-      message: `${username} created a new post: ${title}`,
+      message: `${user.username} created a new post: ${title}`,
     }));
     await Notification.insertMany(notifications);
 
@@ -271,58 +293,85 @@ class PostService {
     return { posts, total, page, limit };
   }
 
-  static async updatePost({
+  static async updatePost(
     slug,
-    title,
-    description,
-    content,
-    categoryId,
-    tagIds,
-    file,
-    userId,
-    currentUser,
-  }) {
+    { title, description, content, category, tags, image },
+    user
+  ) {
     const post = await Post.findOne({ slug, isDeleted: false });
     if (!post) throw new Error("Post not found");
-    if (post.uid !== userId && currentUser.role !== "Admin") {
-      throw new Error("Unauthorized");
-    }
 
-    if (title) post.title = title;
+    if (title) {
+      post.title = title;
+      let slug = title
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+
+      const existingPost = await Post.findOne({
+        slug,
+        isDeleted: false,
+        _id: { $ne: post._id },
+      });
+      if (existingPost) {
+        slug = `${slug}-${Date.now()}`;
+      }
+      post.slug = slug;
+    }
     if (description) post.description = description;
     if (content) post.content = content;
-    if (categoryId) {
-      const category = await Category.findOne({
-        _id: categoryId,
-        isDeleted: false,
-      });
-      if (!category) throw new Error("Invalid or deleted category");
-      post.category = categoryId;
+    if (category) {
+      const categoryDoc = await Category.findById(category);
+      if (!categoryDoc || categoryDoc.isDeleted) {
+        throw createError(404, "Danh mục không tồn tại");
+      }
+      post.category = category;
     }
-    if (tagIds) {
-      const tags = await Tag.find({ _id: { $in: tagIds }, isDeleted: false });
-      if (tags.length !== tagIds.length)
-        throw new Error("One or more tags are invalid or deleted");
-      post.tags = tagIds;
-    }
-
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: "post_images",
-        public_id: `post_${slug}_${Date.now()}`,
-      });
-      post.imageUrl = result.secure_url;
+    if (tags && tags.length > 0) {
+      const tagDocs = await Tag.find({ _id: { $in: tags }, isDeleted: false });
+      if (tagDocs.length !== tags.length) {
+        throw createError(400, "Một hoặc nhiều tag không hợp lệ");
+      }
+      post.tags = tags;
+    } else if (tags) {
+      post.tags = [];
     }
 
+    if (image) {
+      try {
+        const result = await cloudinary.uploader.upload(image.path, {
+          folder: "posts",
+        });
+        post.imageUrl = result.secure_url;
+      } catch (error) {
+        throw createError(500, "Lỗi khi tải lên hình ảnh");
+      }
+    }
+    post.updatedAt = Date.now();
     await post.save();
 
+    // Validate user
+    const userFectch = await User.findOne({ _id: user.uid, isDeleted: false });
+    if (!user) {
+      throw createError(404, "Người dùng không tồn tại");
+    }
+
     await AuditLog.logAction({
-      userId: currentUser.uid,
+      userId: user.uid,
       action: "update",
       resource: "Post",
       resourceId: post._id,
       details: `Updated post with title: ${post.title}`,
     });
+
+    const admins = await User.find({ role: "Admin", isDeleted: false });
+    const notifications = admins.map((admin) => ({
+      userId: admin.uid,
+      type: "post_updated",
+      relatedId: post._id,
+      message: `${userFectch.username} updated post: ${title}`,
+    }));
+    await Notification.insertMany(notifications);
 
     return post;
   }

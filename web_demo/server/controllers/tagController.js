@@ -26,12 +26,11 @@ const getTagBySlug = async (req, res) => {
 const createTag = async (req, res) => {
   try {
     const { name, description } = req.body;
-    const { uid, username, role } = req.user;
+    const { uid } = req.user;
     const tag = await TagService.createTag({
       name,
       description,
       userId: uid,
-      username,
     });
     res.status(201).json(tag);
   } catch (error) {
