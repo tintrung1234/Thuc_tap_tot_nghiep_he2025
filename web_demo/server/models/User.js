@@ -21,7 +21,6 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true, select: false },
     photoUrl: { type: String, default: "" },
-    publicId: { type: String },
     bio: { type: String, maxlength: 160, default: "" },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

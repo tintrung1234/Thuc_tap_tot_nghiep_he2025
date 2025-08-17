@@ -4,9 +4,6 @@ const postController = require("../controllers/postController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const multer = require("multer");
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-// const upload = multer({ storage });
 const upload = multer({
   dest: "uploads/",
 });

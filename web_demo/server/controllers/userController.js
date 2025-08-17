@@ -68,7 +68,7 @@ const changePassword = async (req, res, next) => {
       );
     }
 
-    const result = await userService.changePassword(
+    const result = await UserService.changePassword(
       uid,
       currentPassword,
       newPassword
@@ -131,7 +131,7 @@ module.exports = {
   register,
   login,
   getUser,
-  updateUser: [upload.single("photo"), updateUser],
+  updateUser,
   getRecentUsers,
   getAllUsers,
   softDeleteUser,
