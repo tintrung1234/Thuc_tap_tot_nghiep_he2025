@@ -30,27 +30,30 @@ class PostService {
     return { posts, total, page, limit };
   }
 
-  static async searchPosts({ query, page = 1, limit = 10 }) {
-    const skip = (page - 1) * limit;
-    const posts = await Post.find(
-      { $text: { $search: query }, status: "published", isDeleted: false },
-      { score: { $meta: "textScore" } }
-    )
-      .populate("category", "name slug")
-      .populate("uid", "username")
-      .populate("tags", "name slug")
-      .sort({ score: { $meta: "textScore" } })
-      .skip(skip)
-      .limit(limit)
-      .select(
-        "title slug content description imageUrl category tags views createdAt"
-      );
-    const total = await Post.countDocuments({
-      $text: { $search: query },
-      status: "published",
-      isDeleted: false,
-    });
-    return { posts, total, page, limit };
+  static async searchPosts({ q, category, tags }) {
+    let query = { isDeleted: false, status: "published" };
+
+    if (q) {
+      query.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { description: { $regex: q, $options: "i" } },
+        { content: { $regex: q, $options: "i" } },
+      ];
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (tags) {
+      query.tags = { $in: [tags] };
+    }
+
+    const posts = await Post.find(query)
+      .populate("category", "_id name slug")
+      .populate("tags", "_id name slug")
+      .populate("uid", "_id username photoUrl");
+    return posts;
   }
 
   static async getPostsByCategory({ categorySlug, page = 1, limit = 10 }) {
@@ -266,15 +269,13 @@ class PostService {
   }
 
   static async getPostsByUser({ uid, page = 1, limit = 10 }) {
-    const userObjectId = new mongoose.Types.ObjectId(uid);
-
     // Kiểm tra user tồn tại
-    const user = await User.findOne({ _id: userObjectId, isDeleted: false });
+    const user = await User.findOne({ uid: uid, isDeleted: false });
     if (!user) throw new Error("User not found");
 
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ uid: userObjectId, isDeleted: false })
+    const posts = await Post.find({ uid: user._id, isDeleted: false })
       .populate("category", "name slug")
       .populate("tags", "name slug")
       .populate("uid", "name email")
@@ -286,7 +287,7 @@ class PostService {
       );
 
     const total = await Post.countDocuments({
-      uid: userObjectId,
+      uid: user._id,
       isDeleted: false,
     });
 

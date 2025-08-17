@@ -31,7 +31,7 @@ export default function AuthorPage() {
           );
           setUser(userData);
           setProfile(profileResponse.data);
-          await fetchUserPosts(userData.id, token);
+          await fetchUserPosts(userData.uid, token);
         } catch (error) {
           toast.error("Không thể tải thông tin tài khoản!");
           console.error("Error fetching profile:", error);
@@ -119,6 +119,8 @@ export default function AuthorPage() {
             {profile?.social?.facebook && (
               <a
                 href={profile.social.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <FaFacebookF />
@@ -127,6 +129,8 @@ export default function AuthorPage() {
             {profile?.social?.twitter && (
               <a
                 href={profile.social.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <FaTwitter />
@@ -135,6 +139,8 @@ export default function AuthorPage() {
             {profile?.social?.instagram && (
               <a
                 href={profile.social.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <FaInstagram />
@@ -143,6 +149,8 @@ export default function AuthorPage() {
             {profile?.social?.linkedin && (
               <a
                 href={profile.social.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-400 hover:text-blue-400"
               >
                 <FaYoutube />

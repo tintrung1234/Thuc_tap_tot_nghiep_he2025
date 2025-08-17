@@ -92,7 +92,7 @@ export default function EditProfilePage() {
       formData.append("bio", editedProfile.bio);
       formData.append("social", JSON.stringify(editedProfile.social));
       if (avatarFile) {
-        formData.append("file", avatarFile);
+        formData.append("photo", avatarFile);
       }
       if (removeAvatar) {
         formData.append("removeAvatar", "true");
@@ -132,6 +132,7 @@ export default function EditProfilePage() {
         setRemoveAvatar(false);
         toast.success("Cập nhật thông tin thành công!");
         localStorage.setItem("user", JSON.stringify(response.data.user));
+
         navigate("/author");
       }
     } catch (error) {

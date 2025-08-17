@@ -8,6 +8,14 @@ const PostItem = ({ post }) => {
     navigate(`/detail/${slug}`);
   };
 
+  const truncateDescription = (html, maxLength = 150) => {
+    // Strip HTML tags for truncation
+    const text = html.replace(/<[^>]+>/g, "");
+    if (text.length <= maxLength) return html;
+    const truncatedText = text.slice(0, maxLength) + "...";
+    return `<p>${truncatedText}</p>`;
+  };
+
   return (
     <div
       className="mb-8 flex bg-white shadow rounded overflow-hidden cursor-pointer"
@@ -25,23 +33,24 @@ const PostItem = ({ post }) => {
         <span className="text-purple-600 tracking-widest font-semibold text-sm text-transform: uppercase">
           {post.category.name}
         </span>
-        <h2 className="text-2xl font-semibold text-gray-800 mt-2 mb-2">
-          {post.title}
-        </h2>
+        <h3 className="text-xl font-bold mt-1 text-gray-800 hover:text-purple-700 transition-colors">
+          {post.title || "Không có tiêu đề"}
+        </h3>
         <div className="text-gray-600" />
-        <h2
-          className="mr-1 w-full overflow-y-auto mt-2 mb-4"
-          dangerouslySetInnerHTML={{
-            __html: post?.description || "",
-          }}
-        ></h2>
+        <div className="text-gray-600 text-sm mt-2 line-clamp-3 mb-4">
+          <div
+            dangerouslySetInnerHTML={{
+              __html: truncateDescription(post.description || ""),
+            }}
+          />
+        </div>
         {post.tags && post.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {post.tags.map((tagItem) => (
               <Link
                 key={tagItem._id}
                 to={`/tags/${tagItem.slug}`}
-                className="text-blue-500 text-sm hover:underline"
+                className="text-blue-500 text-sm font-medium hover:underline bg-blue-50 px-2 py-1 rounded"
                 onClick={(e) => e.stopPropagation()}
               >
                 #{tagItem.name}
