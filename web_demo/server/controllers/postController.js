@@ -13,18 +13,13 @@ const getAllPosts = async (req, res) => {
   }
 };
 
-const searchPosts = async (req, res) => {
+const searchPosts = async (req, res, next) => {
   try {
-    const { query, page, limit } = req.query;
-    if (!query) throw new Error("Query is required");
-    const result = await PostService.searchPosts({
-      query,
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
-    res.json(result);
+    const { q, category, tags } = req.query;
+    const posts = await PostService.searchPosts({ q, category, tags });
+    res.status(200).json(posts);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 };
 
