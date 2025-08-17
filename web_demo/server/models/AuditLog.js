@@ -31,6 +31,7 @@ const auditLogSchema = new mongoose.Schema(
         "Policy",
         "Notification",
         "Contact",
+        "Tag",
       ],
       index: true,
     },

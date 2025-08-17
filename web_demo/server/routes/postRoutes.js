@@ -2,6 +2,14 @@ const express = require("express");
 const router = express.Router();
 const postController = require("../controllers/postController");
 const authMiddleware = require("../middlewares/authMiddleware");
+const multer = require("multer");
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+// const upload = multer({ storage });
+const upload = multer({
+  dest: "uploads/",
+});
 
 router.get("/", postController.getAllPosts);
 router.get("/search", postController.searchPosts);
@@ -11,9 +19,19 @@ router.get("/top", postController.getTopPost);
 router.get("/featured", postController.getFeaturedPosts);
 router.get("/recent", postController.getRecentPosts);
 router.get("/:slug", postController.getPostBySlug);
-router.post("/", authMiddleware, postController.createPost);
+router.post(
+  "/create",
+  authMiddleware,
+  upload.single("image"),
+  postController.createPost
+);
 router.get("/user/:uid", postController.getPostsByUser);
-router.put("/:slug", authMiddleware, postController.updatePost);
+router.put(
+  "/update/:slug",
+  authMiddleware,
+  upload.single("image"),
+  postController.updatePost
+);
 router.delete("/:slug", authMiddleware, postController.softDeletePost);
 
 module.exports = router;

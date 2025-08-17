@@ -229,7 +229,7 @@ export default function AuthorPage() {
                     )}
                   </div>
                   <a
-                    href={`/edit-post/${post._id}`}
+                    href={`/edit-post/${post.slug}`}
                     className="text-blue-700 hover:underline ml-auto p-2"
                     onClick={(e) => e.stopPropagation()}
                   >
