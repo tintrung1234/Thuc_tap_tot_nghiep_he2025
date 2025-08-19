@@ -23,8 +23,8 @@ sử dụng: - **Chunking + Vietnamese NLP** (underthesea) -
 1.  **Clone repo**
 
     ```bash
-    git clone https://github.com/yourname/blog-chroma-demo.git
-    cd blog-chroma-demo
+    git clone https://github.com/tintrung1234/Thuc_tap_tot_nghiep_he2025.git
+    cd web-demo/chroma_server
     ```
 
 2.  **Tạo môi trường ảo & cài dependencies**
@@ -40,18 +40,15 @@ sử dụng: - **Chunking + Vietnamese NLP** (underthesea) -
 3.  **Cấu hình**
 
         - File `.env` chứa config (ví dụ `DB_PATH`, `EMBEDDING_MODEL`).
-
-```bash
-    CHROMA_COLLECTION=
-    EMBED_MODEL=
-    MAX_TOKENS=
-    OVERLAP=
-    BATCH_SIZE=
-    CHROMA_PATH=
-    MONGO_URI=
-    MONGO_DB=
-    MONGO_COLLECTION=
-```
+        CHROMA_COLLECTION=
+        EMBED_MODEL=
+        MAX_TOKENS=
+        OVERLAP=
+        BATCH_SIZE=
+        CHROMA_PATH=
+        MONGO_URI=
+        MONGO_DB=
+        MONGO_COLLECTION=
 
 ---
 
