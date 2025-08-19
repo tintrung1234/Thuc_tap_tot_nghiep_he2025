@@ -1,125 +1,164 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import "quill/dist/quill.snow.css"; // Import Quill's CSS
+import "quill/dist/quill.snow.css";
 import axios from "axios";
 import { toast } from "react-toastify";
 import Editor from "../components/Editor";
-import { getAuth } from "firebase/auth";
-import UserAva from "../assets/UserAva.jpg";
-import shuttle from "../assets/shuttle.png";
-import business from "../assets/business.png";
-import economy from "../assets/economy.png";
-import cyborg from "../assets/cyborg.png";
-import { onAuthStateChanged } from "firebase/auth";
 import EditPostPageSkeleton from "../components/EditPostPageSkeleton";
 import ImagePostDropzone from "../components/ImagePostDropzone";
+import RequireAuth from "../middleware/RequireAuth";
 
 const EditPostPage = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const auth = getAuth();
   const [post, setPost] = useState({
     title: "",
     description: "",
+    content: "",
     imageUrl: "",
     category: "",
     tags: [],
   });
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-
-  // Sample categories and images
-  const categories = ["Startup", "Business", "Economy", "Technology"];
-  const images = [shuttle, business, economy, cyborg];
-
-  // Sample tags
-  const tagsName = [
-    "Life",
-    "Technology",
-    "Business",
-    "Marketing",
-    "Starup",
-    "Experience",
-    "Screen",
-  ];
-
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarError, setAvatarError] = useState("");
   const [preview, setPreview] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [newTag, setNewTag] = useState("");
 
   useEffect(() => {
-    const fetchPost = async () => {
+    const fetchData = async () => {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      if (!token || !user?.uid) {
+        toast.error("Vui lòng đăng nhập để chỉnh sửa bài viết!");
+        navigate("/login");
+        return;
+      }
+
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/detail/${id}`
+        // Fetch user profile
+        const profileResponse = await axios.get(
+          `http://localhost:5000/api/users/${user.uid}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        const data = response.data;
+        setProfile(profileResponse.data);
+
+        // Fetch post details
+        const postResponse = await axios.get(
+          `http://localhost:5000/api/posts/${slug}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = postResponse.data;
         setPost({
           title: data.title || "",
           description: data.description || "",
+          content: data.content || "",
           imageUrl: data.imageUrl || "",
-          category: data.category || "",
-          tags: data.tags || [],
+          category: data.category?._id || data.category || "",
+          tags: data.tags?.map((tag) => tag._id || tag) || [],
         });
         setPreview(
           data.imageUrl ||
             "https://res.cloudinary.com/daeorkmlh/image/upload/v1750835215/No-Image-Placeholder.svg_v0th8g.png"
         );
+
+        // Fetch categories
+        const categoriesResponse = await axios.get(
+          "http://localhost:5000/api/categories"
+        );
+        setCategories(categoriesResponse.data.categories);
+
+        // Fetch latest 10 tags
+        const tagsResponse = await axios.get(
+          "http://localhost:5000/api/tags?limit=10"
+        );
+        setAvailableTags(tagsResponse.data.tags);
       } catch (error) {
-        toast.error("Không thể tải bài viết!");
-        console.error("Error fetching post:", error);
+        toast.error("Không thể tải dữ liệu!");
+        console.error("Error fetching data:", error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        try {
-          const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/profile/${currentUser.uid}`
-          );
-          setProfile(profileResponse.data);
-        } catch (error) {
-          toast.error("Không thể tải thông tin tài khoản!");
-          console.error("Error fetching profile:", error);
-        }
-      } else {
-        setProfile(null);
-      }
-      await fetchPost(); // Fetch post after profile is handled
-      setLoading(false);
-    });
+    fetchData();
+  }, [slug, navigate]);
 
-    return () => unsubscribe();
-  }, [id]);
-
-  const handleEditorChange = (html) => {
+  const handleContentChange = (html) => {
     setPost((prevPost) => ({
       ...prevPost,
-      description: html,
+      content: html,
     }));
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTag.trim()) {
+      toast.error("Vui lòng nhập tên tag!");
+      return;
+    }
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/tags",
+        { name: newTag },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAvailableTags((prev) => [...prev, response.data]);
+      setPost((prevPost) => ({
+        ...prevPost,
+        tags: [...prevPost.tags, response.data._id],
+      }));
+      setNewTag("");
+      toast.success("Tạo tag mới thành công!");
+    } catch (error) {
+      toast.error("Lỗi khi tạo tag mới!");
+      console.error("Error creating tag:", error);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!token || !user?.uid) {
+      toast.error("Bạn chưa đăng nhập!");
+      setLoading(false);
+      navigate("/login");
+      return;
+    }
+
+    if (!post.title || !post.description || !post.content || !post.category) {
+      toast.error("Vui lòng nhập đầy đủ tiêu đề, mô tả, nội dung và danh mục!");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Bạn chưa đăng nhập");
-
-      const token = await user.getIdToken();
-
       const data = new FormData();
-      data.append("category", post.category);
       data.append("title", post.title);
       data.append("description", post.description);
+      data.append("content", post.content);
+      data.append("category", post.category);
       if (avatarFile) {
         data.append("image", avatarFile);
       }
       post.tags.forEach((tag) => data.append("tags", tag));
 
-      await axios.put(`http://localhost:5000/api/posts/update/${id}`, data, {
+      await axios.put(`http://localhost:5000/api/posts/update/${slug}`, data, {
         headers: {
+          "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
       });
@@ -127,7 +166,9 @@ const EditPostPage = () => {
       toast.success("Cập nhật bài viết thành công!");
       setTimeout(() => navigate(`/author`), 1000);
     } catch (error) {
-      toast.error("Cập nhật bài viết thất bại!");
+      toast.error(
+        error?.response?.data?.error || "Cập nhật bài viết thất bại!"
+      );
       console.error("Error updating post:", error);
     } finally {
       setLoading(false);
@@ -139,140 +180,182 @@ const EditPostPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div data-aos="fade-up">
-        {/* User Info */}
-        <div className="w-full py-8 flex justify-center">
-          <div className="max-w-4xl p-4 flex justify-center">
-            <div className="flex-col">
-              <div className="flex items-center w-full">
-                <img
-                  src={profile?.photoUrl || UserAva}
-                  alt="useravatar"
-                  className="h-[75px] w-[73px] rounded-full mr-4"
-                />
-                <h3 className="text-purple-700 font-bold text-[28px]">
-                  {profile?.username || "Anonymous"}
-                </h3>
-              </div>
-              <h2 className="text-[34px] font-bold mt-3">
-                Hey {profile?.username || "Anonymous"}, What would you like to
-                edit about this blog?
-              </h2>
-            </div>
-          </div>
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-8"
-        >
-          <div>
-            <label className="block font-semibold text-[24px]">Title</label>
-            <input
-              type="text"
-              value={post.title}
-              onChange={(e) => setPost({ ...post, title: e.target.value })}
-              className="mt-2 block w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
-              required
-            />
-          </div>
-
-          {/* Category */}
-          <div>
-            <h3 className="block font-semibold text-[24px]">Category</h3>
-            <div className="p-4 flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-center">
-              {categories.map((cat, index) => (
-                <div
-                  key={index}
-                  onClick={() => setPost({ ...post, category: cat })}
-                  className={`hoverBehavior w-full sm:w-80 h-33 flex items-center p-3 mt-2 border-2 rounded-xl cursor-pointer transition-colors ${
-                    post.category === cat
-                      ? "bg-yellow-400 border-yellow-500"
-                      : "border-gray-200 hover:border-purple-300"
-                  }`}
-                >
-                  <div className="colorSmallBox w-15 h-15 justify-center items-center flex rounded-xl">
-                    <img
-                      src={images[index]}
-                      alt="category"
-                      className="w-[25px] h-[25px]"
-                    />
-                  </div>
-                  <h2 className="font-semibold text-[18px] ml-3">{cat}</h2>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <h3 className="block font-semibold text-[24px]">Tags</h3>
-            <div className="p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {tagsName.map((tag, index) => (
-                  <div
-                    key={index}
-                    onClick={() =>
-                      setPost((prevPost) => {
-                        const newTags = prevPost.tags.includes(tag)
-                          ? prevPost.tags.filter((t) => t !== tag)
-                          : [...prevPost.tags, tag];
-                        return { ...prevPost, tags: newTags };
-                      })
+    <RequireAuth>
+      <div className="min-h-screen bg-gray-50">
+        <div data-aos="fade-up">
+          {/* User Info */}
+          <div className="w-full p-4 flex justify-center">
+            <div className="max-w-4xl p-4 flex justify-center">
+              <div className="flex-col">
+                <div className="flex items-center w-full">
+                  <img
+                    src={
+                      profile?.photoUrl ||
+                      "https://res.cloudinary.com/daeorkmlh/image/upload/v1750775424/avatar-trang-4_jjrbuu.jpg"
                     }
-                    className={`hoverBehavior activeBehavior flex items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-colors ${
-                      post.tags.includes(tag)
-                        ? "bg-yellow-400 border-yellow-500"
-                        : "border-gray-200 hover:border-purple-300"
+                    alt="useravatar"
+                    className="h-[75px] w-[73px] rounded-full mr-4"
+                  />
+                  <h3 className="text-purple-700 font-bold text-[28px]">
+                    {profile?.username || "Anonymous"}
+                  </h3>
+                </div>
+                <h2 className="text-[34px] font-bold mt-3">
+                  Hey {profile?.username || "Anonymous"}, bạn muốn chỉnh sửa gì
+                  trong bài viết này?
+                </h2>
+              </div>
+            </div>
+          </div>
+          <form
+            onSubmit={handleSubmit}
+            className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md space-y-2"
+          >
+            {/* Title */}
+            <div className="p-3">
+              <label className="font-bold text-[26px] sm:text-2xl mt-3">
+                Tiêu đề
+              </label>
+              <input
+                type="text"
+                value={post.title}
+                onChange={(e) => setPost({ ...post, title: e.target.value })}
+                className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+
+            {/* Category */}
+            <div className="p-3">
+              <h3 className="font-bold text-[22px] sm:text-2xl mb-2">
+                Danh mục
+              </h3>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-6 p-4">
+                {categories.map((cat) => (
+                  <div
+                    key={cat._id}
+                    onClick={() => setPost({ ...post, category: cat._id })}
+                    className={`cursor-pointer flex items-center gap-3 px-4 py-2 border-2 rounded-xl transition-all ${
+                      post.category === cat._id
+                        ? "bg-yellow-400 border-gray-500"
+                        : "border-gray-200"
                     }`}
                   >
-                    <h2 className="font-bold text-[18px]">#{tag}</h2>
+                    <div className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100">
+                      <span className="text-sm font-medium">{cat.name[0]}</span>
+                    </div>
+                    <h2 className="font-medium text-base sm:text-lg">
+                      {cat.name}
+                    </h2>
                   </div>
                 ))}
+              </div>
+            </div>
 
-                {/* Add tag button */}
-                <div className="hoverBehavior activeBehavior flex items-center justify-center p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-purple-300">
-                  <h2 className="font-bold text-[18px]">+</h2>
+            {/* Tags */}
+            <div className="p-3">
+              <h3 className="font-bold text-[26px] sm:text-2xl">Tags</h3>
+              <div className="p-3 sm:p-4 md:p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {availableTags.map((tag) => (
+                    <div
+                      key={tag._id}
+                      onClick={() =>
+                        setPost((prevPost) => {
+                          const newTags = prevPost.tags.includes(tag._id)
+                            ? prevPost.tags.filter((t) => t !== tag._id)
+                            : [...prevPost.tags, tag._id];
+                          return { ...prevPost, tags: newTags };
+                        })
+                      }
+                      className={`hoverBehavior activeBehavior flex items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-colors ${
+                        post.tags.includes(tag._id)
+                          ? "bg-yellow-400 border-gray-500"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <h2 className="font-bold text-[18px]">#{tag.name}</h2>
+                    </div>
+                  ))}
+                  {/* Add new tag */}
+                  <div className="hoverBehavior activeBehavior flex items-center justify-between p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-purple-300">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="Thêm tag mới"
+                      className="w-full p-1 text-sm border-none focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateTag}
+                      className="ml-2 text-blue-600 font-bold text-lg"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block font-semibold text-[24px]">Image</label>
-            <ImagePostDropzone
-              setAvatarFile={setAvatarFile}
-              setPreview={setPreview}
-              setAvatarError={setAvatarError}
-            />
-            {preview && (
-              <div className="mt-2 flex items-center gap-4">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="mt-2 object-cover rounded"
-                />
-              </div>
-            )}
+            {/* Image */}
+            <div className="p-3">
+              <label className="block font-bold text-[24px]">Hình ảnh</label>
+              <ImagePostDropzone
+                setAvatarFile={setAvatarFile}
+                setPreview={setPreview}
+                setAvatarError={setAvatarError}
+              />
+              {preview && (
+                <div className="mt-2 flex items-center gap-4">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="mt-2 object-cover rounded w-60 h-60"
+                  />
+                </div>
+              )}
+              {avatarError && (
+                <p className="text-red-500 text-sm mt-1">{avatarError}</p>
+              )}
+            </div>
 
-            {avatarError && (
-              <p className="text-red-500 text-sm mt-1">{avatarError}</p>
-            )}
-          </div>
-          <div>
-            <label className="block font-semibold text-[24px] ">Body</label>
-            <Editor value={post.description} onChange={handleEditorChange} />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-yellow-400 text-black px-6 py-3 rounded-lg hover:bg-yellow-500 transition"
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save Changes"}
-          </button>
-        </form>
+            {/* Description */}
+            <div className="p-3">
+              <label className="block font-bold text-[26px]">Mô tả</label>
+              <textarea
+                value={post.description}
+                onChange={(e) =>
+                  setPost((prevPost) => ({
+                    ...prevPost,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Viết nội dung tóm tắt tại đây"
+                className="mt-2 text-[18px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+              />
+            </div>
+
+            {/* Content */}
+            <div className="p-3">
+              <label className="block font-bold text-[26px]">Nội dung</label>
+              <Editor value={post.content} onChange={handleContentChange} />
+            </div>
+
+            {/* Submit Button */}
+            <div className="px-3 flex justify-center">
+              <button
+                type="submit"
+                className="w-full bg-yellow-400 text-black px-6 py-3 rounded-lg hover:bg-yellow-500 transition"
+                disabled={loading}
+              >
+                {loading ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </RequireAuth>
   );
 };
 

@@ -1,174 +1,140 @@
-const User = require("../models/User");
-const cloudinary = require("../config/cloudinary");
+const UserService = require("../services/UserService");
+const multer = require("multer");
 
-// Register Endpoint
-const createUser = async (req, res) => {
-  console.log("Received registration request:", req.body);
-  const { uid, email, username, role } = req.body;
+const upload = multer({ dest: "uploads/" });
 
+const register = async (req, res) => {
   try {
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({ error: "Email or username already exists" });
-    }
-
-    const newUser = new User({ uid, email, username, role });
-    await newUser.save();
-    res.status(201).json({ message: "User registered successfully" });
+    const { email, username, password } = req.body;
+    const result = await UserService.register({ email, username, password });
+    res.status(201).json(result);
   } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ error: "Server error during registration" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Get User Profile Endpoint
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const result = await UserService.login({ email, password });
+    res.json(result);
+  } catch (error) {
+    res.status(401).json({ error: error.message });
+  }
+};
+
 const getUser = async (req, res) => {
   try {
-    const user = await User.findOne({ uid: req.params.uid });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const { uid } = req.params;
+    const user = await UserService.getUserById(uid);
     res.json(user);
   } catch (error) {
-    console.error("Error fetching profile:", error);
-    res.status(500).json({ error: "Server error while fetching profile" });
+    res.status(404).json({ error: error.message });
   }
 };
 
-// Update User Profile
-const updateUser = async (req, res) => {
+const updateUser = async (req, res, next) => {
   try {
-    const uid = req.params.uid;
-    const { username } = req.body;
-    const removeAvatar = req.body.removeAvatar === "true";
+    const { uid } = req.params;
+    const file = req.file;
 
-    const user = await User.findOne({ uid });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const updateData = {
+      username: req.body.username,
+      bio: req.body.bio,
+      social: req.body.social,
+      removeAvatar: req.body.removeAvatar,
+    };
 
-    // Nếu cần xoá ảnh cũ
-    if (removeAvatar && user.publicId) {
-      await cloudinary.uploader.destroy(user.publicId);
-      user.photoUrl = "";
-      user.publicId = "";
-    }
-
-    // Nếu có file mới → upload Cloudinary
-    if (req.file) {
-      if (user.publicId) {
-        await cloudinary.uploader.destroy(user.publicId);
-      }
-
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "avatars",
-      });
-      user.photoUrl = uploadResult.secure_url;
-      user.publicId = uploadResult.public_id;
-    }
-
-    user.username = username || user.username;
-
-    await user.save();
-
-    res.json({
-      message: "Cập nhật thành công",
-      user: {
-        uid: user.uid,
-        username: user.username,
-        email: user.email,
-        photoUrl: user.photoUrl,
-        publicId: user.publicId,
-      },
+    const user = await UserService.updateUser({
+      uid,
+      updateData,
+      file,
     });
+    res.status(200).json({ user, message: "Cập nhật thông tin thành công" });
   } catch (error) {
-    console.error("Update profile error:", error);
-    res
-      .status(500)
-      .json({ message: "Lỗi cập nhật thông tin", error: error.message });
+    next(error);
   }
 };
 
-const getLatestUsers = async (req, res) => {
+const changePassword = async (req, res, next) => {
   try {
-    const users = await User.find()
-      .sort({ createdAt: -1 }) // sắp xếp mới nhất trước
-      .limit(8);
+    const { uid } = req.user;
+    const { currentPassword, newPassword } = req.body;
 
-    res.json({ users });
+    if (!currentPassword || !newPassword) {
+      throw createError(
+        400,
+        "Vui lòng cung cấp đầy đủ mật khẩu hiện tại và mật khẩu mới"
+      );
+    }
+
+    const result = await UserService.changePassword(
+      uid,
+      currentPassword,
+      newPassword
+    );
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error fetching latest users:", error);
-    res.status(500).json({ message: "Lỗi khi lấy người dùng mới", error });
+    next(error);
   }
 };
 
-// lấy dữ liệu toàn bộ Users
-const getAllUsers = async (req, res) => {
+const getRecentUsers = async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 }); // Lấy tất cả và sắp xếp theo thời gian tạo mới nhất
+    const users = await UserService.getRecentUsers();
     res.json(users);
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ error: "Server error while fetching users" });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Chỉnh sửa thông tin users
-const updateUserByUid = async (req, res) => {
+const getAllUsers = async (req, res) => {
   try {
-    const { uid } = req.params;
-    const { username, email, role } = req.body;
-
-    if (!username || !email || !uid) {
-      return res.status(400).json({ error: 'Username, email và uid là bắt buộc' });
-    }
-
-    const updatedUser = await User.findOneAndUpdate(
-      { uid },
-      { username, email, role },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'Không tìm thấy người dùng' });
-    }
-
-    res.json({ message: 'Cập nhật người dùng thành công', user: updatedUser });
+    const { role } = req.query;
+    const users = await UserService.getAllUsers({
+      role,
+      currentUser: req.user,
+    });
+    res.json(users);
   } catch (error) {
-    console.error('Lỗi cập nhật người dùng:', error);
-    res.status(500).json({ error: 'Lỗi máy chủ khi cập nhật người dùng' });
+    res.status(403).json({ error: error.message });
   }
 };
 
-// Controller xóa user
-const deleteUser = async (req, res) => {
+const softDeleteUser = async (req, res) => {
   try {
     const { uid } = req.params;
-
-    // Kiểm tra uid có tồn tại không
-    if (!uid) {
-      return res.status(400).json({ error: "UID user không được cung cấp" });
-    }
-
-    const deletedUser = await User.findOneAndDelete({ uid });
-
-    if (!deletedUser) {
-      return res.status(404).json({ error: "Không tìm thấy user cần xóa" });
-    }
-
-    res.json({ message: "Xóa user thành công", user: deletedUser });
+    const result = await UserService.softDeleteUser({
+      uid,
+      currentUser: req.user,
+    });
+    res.json(result);
   } catch (error) {
-    console.error("Lỗi khi xóa user:", error);
-    res.status(500).json({ error: "Lỗi máy chủ khi xóa user" });
+    res.status(403).json({ error: error.message });
+  }
+};
+
+const restoreUser = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const result = await UserService.restoreUser({
+      uid,
+      currentUser: req.user,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(403).json({ error: error.message });
   }
 };
 
 module.exports = {
-  createUser,
+  register,
+  login,
   getUser,
   updateUser,
-  getLatestUsers,
+  getRecentUsers,
   getAllUsers,
-  updateUserByUid,
-  deleteUser
+  softDeleteUser,
+  restoreUser,
+  changePassword,
 };

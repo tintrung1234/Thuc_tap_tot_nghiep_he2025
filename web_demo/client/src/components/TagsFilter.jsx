@@ -1,90 +1,75 @@
 import React from "react";
-import { getCategoryIcon } from "../utils/getCategoryIcon";
 
 const TagsFilter = ({
-  posts,
-  searchQuery,
+  categories,
+  tags,
   selectedCategory,
   selectedTag,
   onCategoryChange,
   onTagChange,
 }) => {
-  // Extract unique categories from posts
-  // const allCategories = [...new Set(posts.map(post => post.category).filter(category => category))];
-
-  // Define all possible categories
-  const allCategories = ["Startup", "Business", "Economy", "Technology"];
-
-  // Extract unique tags from posts
-  // const allTags = [
-  //   ...new Set(posts.flatMap((post) => post.tags || []).filter((tag) => tag)),
-  // ];
-
-  // Define all possible tags
-  const allTags = [
-    "Life",
-    "Technology",
-    "Business",
-    "Marketing",
-    "Starup",
-    "Experience",
-    "Screen",
-  ];
-
-  // Ensure only one filter (category or tag) is active at a time
-  const handleCategoryClick = (category) => {
-    onCategoryChange(category);
-    onTagChange(""); // Clear tag selection when category is selected
-  };
-
-  const handleTagClick = (tag) => {
-    onTagChange(tag);
-    onCategoryChange(""); // Clear category selection when tag is selected
-  };
-
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-2">THỂ LOẠI</h3>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {allCategories.length > 0 ? (
-          allCategories.map((category) => (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Bộ lọc</h2>
+
+      {/* Categories */}
+      <div className="mb-6">
+        <h3 className="font-semibold text-lg mb-2">Danh mục</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onCategoryChange("")}
+            className={`px-4 py-2 rounded-lg ${
+              selectedCategory === ""
+                ? "bg-yellow-400 text-black"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Tất cả
+          </button>
+          {categories.map((cat) => (
             <button
-              key={category}
-              className={`text-black px-4 py-2 rounded flex items-center space-x-2 mb-4 ${
-                selectedCategory === category
+              key={cat._id}
+              onClick={() => onCategoryChange(cat._id)}
+              className={`px-4 py-2 rounded-lg ${
+                selectedCategory === cat._id
                   ? "bg-yellow-400 text-black"
-                  : "bg-gray-700 text-white hover:bg-gray-600"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
-              onClick={() => handleCategoryClick(category)}
             >
-              {getCategoryIcon(category)}
-              <span>{category}</span>
+              {cat.name}
             </button>
-          ))
-        ) : (
-          <p>Không có thể loại nào.</p>
-        )}
+          ))}
+        </div>
       </div>
 
-      <h3 className="text-lg font-semibold mt-4 mb-2">TẤT CẢ TAGS</h3>
-      <div className="flex flex-wrap gap-2">
-        {allTags.length > 0 ? (
-          allTags.map((tag) => (
+      {/* Tags */}
+      <div>
+        <h3 className="font-semibold text-lg mb-2">Tags</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onTagChange("")}
+            className={`px-4 py-2 rounded-lg ${
+              selectedTag === ""
+                ? "bg-yellow-400 text-black"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Tất cả
+          </button>
+          {tags.map((tag) => (
             <button
-              key={tag}
-              className={`border border-gray-300 text-gray-700 px-4 py-1 rounded ${
-                selectedTag === tag
-                  ? "bg-blue-400 text-white"
-                  : "hover:bg-gray-100"
+              key={tag._id}
+              onClick={() => onTagChange(tag._id)}
+              className={`px-4 py-2 rounded-lg ${
+                selectedTag === tag._id
+                  ? "bg-yellow-400 text-black"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
-              onClick={() => handleTagClick(tag)}
             >
-              {tag}
+              #{tag.name}
             </button>
-          ))
-        ) : (
-          <p>Không có tags nào.</p>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );

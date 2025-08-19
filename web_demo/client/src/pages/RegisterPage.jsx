@@ -8,8 +8,6 @@ import ic_x from "../assets/ic_x.png";
 import view from "../assets/view.png";
 import hide from "../assets/hide.png";
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -29,30 +27,33 @@ function Register() {
     setSuccess("");
 
     try {
-      // Create user with Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
+      const response = await axios.post(
+        "http://localhost:5000/api/users/register",
+        {
+          email,
+          username,
+          password,
+        }
       );
-      const user = userCredential.user;
 
-      // Save user details to MongoDB
-      await axios.post("http://localhost:5000/api/users/register", {
-        uid: user.uid,
-        email: user.email,
-        username,
-        role: "User", // Default role 
-      });
+      const { token, user } = response.data;
+
+      // Lưu token vào localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
       setSuccess("Tạo tài khoản thành công!");
       toast.success("Tạo tài khoản thành công!");
+
+      // Delay 2 giây trước khi chuyển hướng
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
       toast.error("Tạo tài khoản thất bại!");
-      setError(err.message || "Đã xảy ra lỗi khi đăng ký.");
+      const errorMessage =
+        err.response?.data?.error || "Đã xảy ra lỗi khi đăng ký.";
+      setError(errorMessage);
     }
   };
 
@@ -63,7 +64,7 @@ function Register() {
         <div className="w-full md:w-3/5 register-bg p-10 space-y-6">
           <div className="flex flex-col items-center">
             <div className="bg-lime-400 text-black w-12 h-12 rounded-full flex items-center justify-center mb-2">
-              <img src={ic_register}></img>
+              <img src={ic_register} alt="register icon" />
             </div>
             <h2 className="text-2xl font-semibold">Create an account</h2>
             <p className="text-gray-400 text-sm">
@@ -77,8 +78,10 @@ function Register() {
               <button
                 key={platform}
                 className="bg-gray-700 p-3 rounded-lg hover:bg-gray-600 transition"
+                disabled
+                title="Tính năng đăng nhập mạng xã hội chưa được hỗ trợ"
               >
-                <img src={platform} alt="icon" className="w-5 h-5" />
+                <img src={platform} alt="social icon" className="w-5 h-5" />
               </button>
             ))}
           </div>
@@ -131,9 +134,9 @@ function Register() {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <img src={view} className="h-6 w-6"></img>
+                  <img src={view} className="h-6 w-6" alt="view password" />
                 ) : (
-                  <img src={hide} className="h-6 w-6"></img>
+                  <img src={hide} className="h-6 w-6" alt="hide password" />
                 )}
               </button>
             </div>
@@ -170,8 +173,8 @@ function Register() {
         </div>
 
         {/* Right Side - Image */}
-        <div className="hidden md:block w-full bg-cover register-bg  bg-center p-5">
-          <img src={banner} className="w-full h-95"></img>
+        <div className="hidden md:block w-full bg-cover register-bg bg-center p-5">
+          <img src={banner} className="w-full h-95" alt="banner" />
         </div>
       </div>
     </div>

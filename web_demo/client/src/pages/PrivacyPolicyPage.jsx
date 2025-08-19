@@ -14,7 +14,7 @@ const PrivacyPolicyPage = () => {
     const fetchPolicy = async () => {
       try {
         const response = await axios.get("http://localhost:5000/api/policy");
-        setPolicy(response.data.policy || []);
+        setPolicy(response.data.policies || []);
         setLatestUpdate(response.data.latestUpdate);
       } catch (error) {
         toast.error("Không thể tải dữ liệu. Vui lòng thử lại sau.");

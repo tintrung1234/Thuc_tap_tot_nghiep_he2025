@@ -4,19 +4,16 @@ import { Link, useNavigate } from "react-router-dom";
 const PostItem = ({ post }) => {
   const navigate = useNavigate();
 
-  const handleDetailClick = (_id) => {
-    navigate(`/detail/${encodeURIComponent(_id)}`);
+  const handleDetailClick = (slug) => {
+    navigate(`/detail/${slug}`);
   };
 
-  const truncateDescription = (html, maxLength) => {
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    const text = div.textContent || div.innerText || "";
+  const truncateDescription = (html, maxLength = 150) => {
+    // Strip HTML tags for truncation
+    const text = html.replace(/<[^>]+>/g, "");
     if (text.length <= maxLength) return html;
-    return (
-      `${text.substring(0, maxLength)}...` +
-      div.innerHTML.substring(0, div.innerHTML.indexOf(">", maxLength))
-    );
+    const truncatedText = text.slice(0, maxLength) + "...";
+    return `<p>${truncatedText}</p>`;
   };
 
   return (
@@ -24,39 +21,39 @@ const PostItem = ({ post }) => {
       className="mb-8 flex bg-white shadow rounded overflow-hidden cursor-pointer"
       data-aos="fade-up"
       onClick={() => {
-        handleDetailClick(post._id);
+        handleDetailClick(post.slug);
       }}
     >
       <img
         src={post.imageUrl}
         alt={post.title}
-        className="w-1/3 h-auto object-cover"
+        className="w-1/3 h-60 object-cover "
       />
-      <div className="p-6 w-2/3">
+      <div className="p-8 w-2/3">
         <span className="text-purple-600 tracking-widest font-semibold text-sm text-transform: uppercase">
-          {post.category}
+          {post.category.name}
         </span>
-        <h2 className="text-2xl font-semibold text-gray-800 mt-2 mb-2">
-          {post.title}
-        </h2>
+        <h3 className="text-xl font-bold mt-1 text-gray-800 hover:text-purple-700 transition-colors">
+          {post.title || "Không có tiêu đề"}
+        </h3>
         <div className="text-gray-600" />
-        <h2
-          className="mr-1 w-[50vw] max-h-[50vh] overflow-y-auto mt-2 mb-4"
-          style={{ maxHeight: "50vh" }} // Fallback for older browsers
-          dangerouslySetInnerHTML={{
-            __html: truncateDescription(post?.description || "", 200) || "",
-          }}
-        ></h2>
+        <div className="text-gray-600 text-sm mt-2 line-clamp-3 mb-4">
+          <div
+            dangerouslySetInnerHTML={{
+              __html: truncateDescription(post.description || ""),
+            }}
+          />
+        </div>
         {post.tags && post.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {post.tags.map((tagItem, tagIndex) => (
+            {post.tags.map((tagItem) => (
               <Link
-                key={tagIndex}
-                to={`/tags/${tagItem}`}
-                className="text-blue-500 text-sm hover:underline"
+                key={tagItem._id}
+                to={`/tags/${tagItem.slug}`}
+                className="text-blue-500 text-sm font-medium hover:underline bg-blue-50 px-2 py-1 rounded"
                 onClick={(e) => e.stopPropagation()}
               >
-                #{tagItem}
+                #{tagItem.name}
               </Link>
             ))}
           </div>
