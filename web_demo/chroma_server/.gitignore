@@ -1,1 +1,46 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---- Virtual env ----
+.venv/
+env/
 venv/
+
+# ---- OS specific ----
+.DS_Store
+Thumbs.db
+
+# ---- IDE configs ----
+.vscode/
+.idea/
+*.iml
+
+# ---- Logs ----
+*.log
+
+# ---- Environment ----
+.env
+*.env
+
+# ---- Data / Database ----
+# ChromaDB persistent storage
+chroma-data/
+chroma/chroma_db/
+*.sqlite3
+
+# ---- Other ----
+*.swp
+*.swo
