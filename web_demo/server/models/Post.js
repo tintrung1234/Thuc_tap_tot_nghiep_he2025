@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const axios = require("axios");
 
 const postSchema = new mongoose.Schema(
   {
@@ -33,7 +34,26 @@ const postSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Add text index for search
-postSchema.index({ title: "text", content: "text" });
+// Middleware để gửi data đến ETL API sau save
+postSchema.post("save", async function (doc) {
+  const etlUrl = "http://localhost:5001/etl/process"; // ETL API endpoint
+  const action =
+    doc.status === "published" && !doc.isDeleted ? "upsert" : "delete";
+  const postData = {
+    post_id: doc._id.toString(),
+    title: doc.title,
+    slug: doc.slug,
+    content: doc.content,
+    status: doc.status,
+    isDeleted: doc.isDeleted,
+  };
+
+  try {
+    await axios.post(etlUrl, { action, post: postData });
+    console.log(`ETL processed: ${action} for post ${doc._id}`);
+  } catch (error) {
+    console.error(`ETL error: ${error.message}`);
+  }
+});
 
 module.exports = mongoose.model("Post", postSchema);
