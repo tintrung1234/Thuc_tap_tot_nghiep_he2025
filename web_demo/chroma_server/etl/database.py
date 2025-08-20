@@ -1,3 +1,6 @@
+from typing import List, Tuple
+import chromadb
+import hashlib
 from sentence_transformers import SentenceTransformer
 from .text_processing import html_to_text
 from .chunking import chunk_by_sentences, TokenCounter
@@ -5,12 +8,16 @@ from .embedding import embed_batches
 from .config import Config
 
 
+def sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, collection, cfg: Config):
     """Upsert một bài viết vào Chroma"""
-    post_id = str(post.get("_id"))
-    title = (post.get("title") or "").strip()
-    url = (post.get("slug") or "").strip()  # Dùng slug làm url
-    content = post.get("content") or ""
+    post_id = post.get("post_id")
+    title = post.get("title", "")
+    url = post.get("slug", "")
+    content = post.get("content", "")
     text_clean = html_to_text(content) if content else ""
 
     if not text_clean:
@@ -28,7 +35,7 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
         meta = {
             "post_id": post_id,
             "title": title,
-            "url": f"/posts/{url}",  # Giả sử URL dạng /posts/slug
+            "url": f"/posts/{url}",
             "chunk_index": idx,
             "char_start": cstart,
             "char_end": cend,
@@ -45,7 +52,7 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
             embeddings=embeddings,
             documents=all_docs,
             metadatas=all_metas,
-        )  # type: ignore
+        )
     return len(chunks)
 
 
@@ -59,17 +66,3 @@ def delete_post_chunks(post_id: str, collection):
     except Exception as e:
         print(f"Error deleting chunks for post {post_id}: {e}")
         return 0
-
-
-def iter_posts_from_mongo(mongo_client, db_name: str, collection_name: str, status: str = "published"):
-    """Lấy các bài viết từ MongoDB với trạng thái published"""
-    db = mongo_client[db_name]
-    collection = db[collection_name]
-    query = {"status": status, "isDeleted": False}
-    for post in collection.find(query):
-        yield post
-
-
-def sha256(text: str) -> str:
-    import hashlib
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
