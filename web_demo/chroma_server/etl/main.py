@@ -1,19 +1,32 @@
+from .chunking import TokenCounter
+from .database import upsert_post, delete_post_chunks
+from .config import Config
+from sentence_transformers import SentenceTransformer
+import chromadb
+from flask import Flask, request, jsonify
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Pipeline: MongoDB posts -> clean -> sentence split (underthesea) -> chunk -> embed -> upsert/delete Chroma local
+Flask API để nhận dữ liệu bài viết từ backend NodeJS và chạy ETL (upsert/delete vào Chroma)
 """
-import argparse
-import chromadb
-from sentence_transformers import SentenceTransformer
-from tqdm import tqdm
-import pymongo
-from bson import ObjectId
-from etl.config import Config
-from etl.database import upsert_post, delete_post_chunks, iter_posts_from_mongo
-from etl.chunking import TokenCounter
+
+app = Flask(__name__)
+
+# Load config
+cfg = Config.from_env()
+
+# Chroma client
+client = chromadb.PersistentClient(path=cfg.chroma_path)
+collection = client.get_or_create_collection(
+    name=cfg.collection, metadata={"hnsw:space": "cosine"})
+
+# Embedding model
+print("Tải model:", cfg.embed_model)
+model = SentenceTransformer(cfg.embed_model)
+counter = TokenCounter(model)
 
 
+<<<<<<< HEAD
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -40,12 +53,21 @@ def main():
         "--batch-size", type=int, default=None, help="Batch size for embedding"
     )
     parser.add_argument("--chroma-path", default=None, help="Chroma database path")
+=======
+@app.route('/etl/process', methods=['POST'])
+def process_etl():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"status": "error", "message": "Body phải là JSON"}), 400
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
 
-    args = parser.parse_args()
-    cfg = Config.from_env_and_args(args)
+    action = data.get('action')
+    post = data.get('post')
 
-    print("[CONFIG]", cfg)
+    if not action or not post:
+        return jsonify({"status": "error", "message": "Thiếu action hoặc post data"}), 400
 
+<<<<<<< HEAD
     # Chroma local
     client = chromadb.PersistentClient(path=cfg.chroma_path)
     try:
@@ -54,12 +76,18 @@ def main():
         collection = client.create_collection(
             cfg.collection, metadata={"hnsw:space": "cosine"}
         )
+=======
+    if action == 'upsert':
+        num_chunks = upsert_post(post, model, counter, collection, cfg)
+        return jsonify({"status": "success", "message": f"Upsert {num_chunks} chunks cho post {post.get('post_id')}"}), 200
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
 
-    # Embedding model
-    print("Tải model:", cfg.embed_model)
-    model = SentenceTransformer(cfg.embed_model)
-    counter = TokenCounter(model)
+    elif action == 'delete':
+        post_id = post.get("post_id")
+        num_deleted = delete_post_chunks(post_id, collection)
+        return jsonify({"status": "success", "message": f"Deleted {num_deleted} chunks cho post {post_id}"}), 200
 
+<<<<<<< HEAD
     # MongoDB client
     mongo_client = pymongo.MongoClient(cfg.mongo_uri)
 
@@ -102,7 +130,11 @@ def main():
         )
 
     mongo_client.close()
+=======
+    else:
+        return jsonify({"status": "error", "message": "Invalid action"}), 400
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
 
 
 if __name__ == "__main__":
-    main()
+    app.run(host='0.0.0.0', port=5001, debug=True)

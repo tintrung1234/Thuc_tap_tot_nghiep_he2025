@@ -1,3 +1,6 @@
+from typing import List, Tuple
+import chromadb
+import hashlib
 from sentence_transformers import SentenceTransformer
 from .text_processing import html_to_text
 from .chunking import chunk_by_sentences, TokenCounter
@@ -5,6 +8,7 @@ from .embedding import embed_batches
 from .config import Config
 
 
+<<<<<<< HEAD
 def upsert_post(
     post: dict,
     model: SentenceTransformer,
@@ -12,11 +16,18 @@ def upsert_post(
     collection,
     cfg: Config,
 ):
+=======
+def sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, collection, cfg: Config):
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
     """Upsert một bài viết vào Chroma"""
-    post_id = str(post.get("_id"))
-    title = (post.get("title") or "").strip()
-    url = (post.get("slug") or "").strip()  # Dùng slug làm url
-    content = post.get("content") or ""
+    post_id = post.get("post_id")
+    title = post.get("title", "")
+    url = post.get("slug", "")
+    content = post.get("content", "")
     text_clean = html_to_text(content) if content else ""
 
     if not text_clean:
@@ -33,7 +44,7 @@ def upsert_post(
         meta = {
             "post_id": post_id,
             "title": title,
-            "url": f"/posts/{url}",  # Giả sử URL dạng /posts/slug
+            "url": f"/posts/{url}",
             "chunk_index": idx,
             "char_start": cstart,
             "char_end": cend,
@@ -64,7 +75,7 @@ def upsert_post(
             embeddings=embeddings,
             documents=all_docs,
             metadatas=all_metas,
-        )  # type: ignore
+        )
     return len(chunks)
 
 
@@ -78,6 +89,7 @@ def delete_post_chunks(post_id: str, collection):
     except Exception as e:
         print(f"Error deleting chunks for post {post_id}: {e}")
         return 0
+<<<<<<< HEAD
 
 
 def iter_posts_from_mongo(
@@ -95,3 +107,5 @@ def sha256(text: str) -> str:
     import hashlib
 
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+=======
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02

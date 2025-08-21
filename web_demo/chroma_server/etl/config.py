@@ -1,6 +1,6 @@
-import os
-from dotenv import load_dotenv
 from dataclasses import dataclass
+from dotenv import load_dotenv
+import os
 
 
 @dataclass
@@ -11,17 +11,15 @@ class Config:
     overlap: int
     batch_size: int
     chroma_path: str
-    mongo_uri: str
-    mongo_db: str
-    mongo_collection: str
 
     @staticmethod
-    def from_env_and_args(args) -> "Config":
+    def from_env() -> "Config":
         load_dotenv()
 
-        def get_config(key, arg_value, env_key):
-            value = arg_value or os.getenv(env_key)
+        def get_config(env_key):
+            value = os.getenv(env_key)
             if value is None:
+<<<<<<< HEAD
                 raise ValueError(
                     f"Thiếu cấu hình {env_key} trong .env hoặc argument --{key}"
                 )
@@ -39,4 +37,16 @@ class Config:
             mongo_collection=get_config(
                 "mongo-collection", args.mongo_collection, "MONGO_COLLECTION"
             ),
+=======
+                raise ValueError(f"Thiếu cấu hình {env_key} trong .env")
+            return value
+
+        return Config(
+            collection=get_config("CHROMA_COLLECTION"),
+            embed_model=get_config("EMBED_MODEL"),
+            max_tokens=int(get_config("MAX_TOKENS")),
+            overlap=int(get_config("OVERLAP")),
+            batch_size=int(get_config("BATCH_SIZE")),
+            chroma_path=get_config("CHROMA_PATH"),
+>>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
         )
