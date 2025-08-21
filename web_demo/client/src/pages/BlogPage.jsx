@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 function BlogPage() {
   const [posts, setPosts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 5;
+  const postsPerPage = 8;
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingTopPost, setLoadingTopPost] = useState(true);
   const [topPost, setTopPost] = useState(null);
