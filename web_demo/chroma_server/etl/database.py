@@ -5,7 +5,13 @@ from .embedding import embed_batches
 from .config import Config
 
 
-def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, collection, cfg: Config):
+def upsert_post(
+    post: dict,
+    model: SentenceTransformer,
+    counter: TokenCounter,
+    collection,
+    cfg: Config,
+):
     """Upsert một bài viết vào Chroma"""
     post_id = str(post.get("_id"))
     title = (post.get("title") or "").strip()
@@ -16,8 +22,7 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
     if not text_clean:
         return 0
 
-    chunks = chunk_by_sentences(
-        text_clean, counter, cfg.max_tokens, cfg.overlap)
+    chunks = chunk_by_sentences(text_clean, counter, cfg.max_tokens, cfg.overlap)
     if not chunks:
         return 0
 
@@ -40,6 +45,20 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
 
     if all_docs:
         embeddings = embed_batches(model, all_docs, cfg.batch_size)
+
+        # Debug sample
+        import json
+
+        print(
+            "SAMPLE:",
+            {
+                "ids": all_ids[:1],
+                "doc": str(all_docs[0])[:100],  # tránh in quá dài
+                "emb_len": len(embeddings[0]),
+                "meta": json.dumps(all_metas[0], ensure_ascii=False, default=str),
+            },
+        )
+
         collection.upsert(
             ids=all_ids,
             embeddings=embeddings,
@@ -61,7 +80,9 @@ def delete_post_chunks(post_id: str, collection):
         return 0
 
 
-def iter_posts_from_mongo(mongo_client, db_name: str, collection_name: str, status: str = "published"):
+def iter_posts_from_mongo(
+    mongo_client, db_name: str, collection_name: str, status: str = "published"
+):
     """Lấy các bài viết từ MongoDB với trạng thái published"""
     db = mongo_client[db_name]
     collection = db[collection_name]
@@ -72,4 +93,5 @@ def iter_posts_from_mongo(mongo_client, db_name: str, collection_name: str, stat
 
 def sha256(text: str) -> str:
     import hashlib
+
     return hashlib.sha256(text.encode("utf-8")).hexdigest()

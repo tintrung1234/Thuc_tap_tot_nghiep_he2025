@@ -16,26 +16,30 @@ from etl.chunking import TokenCounter
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--post-id", default=None,
-                        help="ID bài viết cụ thể để xử lý (upsert/delete)")
-    parser.add_argument("--action", choices=["upsert", "delete"],
-                        default="upsert", help="Hành động: upsert hoặc delete")
+    parser.add_argument(
+        "--post-id", default=None, help="ID bài viết cụ thể để xử lý (upsert/delete)"
+    )
+    parser.add_argument(
+        "--action",
+        choices=["upsert", "delete"],
+        default="upsert",
+        help="Hành động: upsert hoặc delete",
+    )
     parser.add_argument("--mongo-uri", default=None, help="MongoDB URI")
-    parser.add_argument("--mongo-db", default=None,
-                        help="MongoDB database name")
-    parser.add_argument("--mongo-collection", default=None,
-                        help="MongoDB collection name")
-    parser.add_argument("--collection", default=None,
-                        help="Chroma collection name")
+    parser.add_argument("--mongo-db", default=None, help="MongoDB database name")
+    parser.add_argument(
+        "--mongo-collection", default=None, help="MongoDB collection name"
+    )
+    parser.add_argument("--collection", default=None, help="Chroma collection name")
     parser.add_argument("--model", default=None, help="Embedding model")
-    parser.add_argument("--max-tokens", type=int,
-                        default=None, help="Max tokens per chunk")
-    parser.add_argument("--overlap", type=int,
-                        default=None, help="Overlap tokens")
-    parser.add_argument("--batch-size", type=int,
-                        default=None, help="Batch size for embedding")
-    parser.add_argument("--chroma-path", default=None,
-                        help="Chroma database path")
+    parser.add_argument(
+        "--max-tokens", type=int, default=None, help="Max tokens per chunk"
+    )
+    parser.add_argument("--overlap", type=int, default=None, help="Overlap tokens")
+    parser.add_argument(
+        "--batch-size", type=int, default=None, help="Batch size for embedding"
+    )
+    parser.add_argument("--chroma-path", default=None, help="Chroma database path")
 
     args = parser.parse_args()
     cfg = Config.from_env_and_args(args)
@@ -48,7 +52,8 @@ def main():
         collection = client.get_collection(cfg.collection)
     except Exception:
         collection = client.create_collection(
-            cfg.collection, metadata={"hnsw:space": "cosine"})
+            cfg.collection, metadata={"hnsw:space": "cosine"}
+        )
 
     # Embedding model
     print("Tải model:", cfg.embed_model)
@@ -68,7 +73,11 @@ def main():
             print(f"Không tìm thấy bài viết với ID {args.post_id}")
             return
 
-        if args.action == "upsert" and post.get("status") == "published" and not post.get("isDeleted", False):
+        if (
+            args.action == "upsert"
+            and post.get("status") == "published"
+            and not post.get("isDeleted", False)
+        ):
             print(f"Upsert bài viết {args.post_id}...")
             num_chunks = upsert_post(post, model, counter, collection, cfg)
             print(f"Đã upsert {num_chunks} chunks cho bài viết {args.post_id}")
@@ -80,12 +89,17 @@ def main():
         # Xử lý tất cả bài viết published
         print("Xử lý tất cả bài viết published...")
         num_posts, num_chunks = 0, 0
-        for post in tqdm(iter_posts_from_mongo(mongo_client, cfg.mongo_db, cfg.mongo_collection), desc="Posts", unit="post"):
+        for post in tqdm(
+            iter_posts_from_mongo(mongo_client, cfg.mongo_db, cfg.mongo_collection),
+            desc="Posts",
+            unit="post",
+        ):
             num_posts += 1
             num_chunks += upsert_post(post, model, counter, collection, cfg)
 
         print(
-            f"✓ Hoàn tất: {num_posts} posts -> {num_chunks} chunks → upsert vào collection '{cfg.collection}'.")
+            f"✓ Hoàn tất: {num_posts} posts -> {num_chunks} chunks → upsert vào collection '{cfg.collection}'."
+        )
 
     mongo_client.close()
 
