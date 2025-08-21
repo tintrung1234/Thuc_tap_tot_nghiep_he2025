@@ -1,92 +1,75 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-from tqdm import tqdm
-from dotenv import load_dotenv
-from pymongo import MongoClient
-import sys
+"""
+Script để chạy lại ETL cho toàn bộ bài blog bằng cách gọi API backend để lấy dữ liệu,
+sau đó gửi từng bài viết đến ETL API server để xử lý (upsert/delete vào Chroma).
+"""
 import os
-import chromadb
-from sentence_transformers import SentenceTransformer
-
-from etl.chunking import TokenCounter
-from etl.database import upsert_post, delete_post_chunks
-from etl.config import Config
+import sys
+import requests
+from dotenv import load_dotenv
+from tqdm import tqdm
 
 
 def main():
     load_dotenv()
+    backend_api_url = os.getenv("BACKEND_API_URL")
+    etl_api_url = os.getenv("ETL_API_URL")
 
-    # Lấy thông tin kết nối Mongo từ .env
-    mongo_uri = os.getenv("MONGO_URI")
-    mongo_db = os.getenv("MONGO_DB")
-    mongo_collection = os.getenv("MONGO_COLLECTION")
-
-    if not mongo_uri or not mongo_db or not mongo_collection:
-        print("❌ Error: Thiếu MONGO_URI / MONGO_DB / MONGO_COLLECTION trong .env")
+    if not backend_api_url or not etl_api_url:
+        print("Error: Thiếu BACKEND_API_URL hoặc ETL_API_URL trong .env")
         sys.exit(1)
 
-    # Kết nối Mongo
-    client_mongo = MongoClient(mongo_uri)
-    db = client_mongo[mongo_db]
-    posts_collection = db[mongo_collection]
+    try:
+        # Lấy danh sách bài viết từ backend API
+        response = requests.get(
+            f"{backend_api_url}")
+        response.raise_for_status()
+        posts = response.json().get("posts", [])
 
-    # Lấy config ETL
-    cfg = Config.from_env()
+        if not posts:
+            print("Không có bài viết published nào để xử lý.")
+            return
 
-    # Kết nối Chroma
-    client_chroma = chromadb.PersistentClient(path=cfg.chroma_path)
-    collection = client_chroma.get_or_create_collection(
-        name=cfg.collection, metadata={"hnsw:space": "cosine"}
-    )
+        # Xử lý từng bài viết
+        num_posts = 0
+        num_chunks = 0
+        for post in tqdm(posts, desc="Processing posts", unit="post"):
+            # Chuẩn bị dữ liệu gửi đến ETL API
+            action = "upsert" if post.get("status") == "published" and not post.get(
+                "isDeleted", False) else "delete"
+            post_data = {
+                "post_id": str(post.get("_id")),
+                "title": post.get("title", ""),
+                "slug": post.get("slug", ""),
+                "content": post.get("content", ""),
+                "status": post.get("status", ""),
+                "isDeleted": post.get("isDeleted", False),
+            }
 
-    # Load model
-    print("🚀 Tải model:", cfg.embed_model)
-    model = SentenceTransformer(cfg.embed_model)
-    counter = TokenCounter(model)
-
-    # Query tất cả bài viết published + chưa bị xóa
-    posts = list(posts_collection.find({
-        "status": "published",
-        "isDeleted": False
-    }))
-
-    if not posts:
-        print("⚠️ Không có bài viết nào để xử lý.")
-        return
-
-    print(f"🔍 Tìm thấy {len(posts)} bài viết trong Mongo")
-
-    # ETL từng bài
-    total_chunks = 0
-    for post in tqdm(posts, desc="Processing posts", unit="post"):
-        post_data = {
-            "post_id": str(post.get("_id")),
-            "title": post.get("title", ""),
-            "slug": post.get("slug", ""),
-            "content": post.get("content", ""),
-            "status": post.get("status", ""),
-            "isDeleted": post.get("isDeleted", False),
-        }
-
-        try:
-            if post_data["status"] == "published" and not post_data["isDeleted"]:
-                num_chunks = upsert_post(
-                    post_data, model, counter, collection, cfg
+            # Gửi yêu cầu đến ETL API
+            try:
+                response = requests.post(
+                    etl_api_url,
+                    json={"action": action, "post": post_data},
+                    timeout=30
                 )
-                total_chunks += num_chunks
-                print(
-                    f"✅ Upsert {num_chunks} chunks cho post {post_data['post_id']}")
-            else:
-                num_deleted = delete_post_chunks(
-                    post_data["post_id"], collection)
-                print(
-                    f"🗑 Deleted {num_deleted} chunks cho post {post_data['post_id']}")
+                response.raise_for_status()
+                result = response.json()
+                print(f"Post {post_data['post_id']}: {result['message']}")
+                if action == "upsert" and result.get("status") == "success":
+                    # Extract số chunks
+                    num_chunks += int(result["message"].split()[1])
+                num_posts += 1
+            except requests.RequestException as e:
+                print(f"Error processing post {post_data['post_id']}: {e}")
 
-        except Exception as e:
-            print(f"❌ Error xử lý post {post_data['post_id']}: {e}")
+        print(
+            f"✓ Hoàn tất: {num_posts} posts -> {num_chunks} chunks processed.")
 
-    print(f"\n🎉 Hoàn tất: {len(posts)} posts → {total_chunks} chunks")
+    except requests.RequestException as e:
+        print(f"Error fetching posts from backend: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
