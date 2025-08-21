@@ -21,7 +21,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views createdAt"
+        "title slug content description imageUrl category tags views createdAt status isDeleted"
       );
     const total = await Post.countDocuments({
       status: "published",
