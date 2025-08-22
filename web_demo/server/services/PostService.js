@@ -6,6 +6,8 @@ const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
 const Share = require("../models/Share");
+const Comment = require("../models/Comment");
+const Reaction = require("../models/Reaction");
 const cloudinary = require("../config/cloudinary");
 const createError = require("http-errors");
 const slugify = require("slugify");
@@ -404,6 +406,38 @@ class PostService {
     });
 
     return { message: "Post soft deleted" };
+  }
+
+  static async getPostCounts(postIds) {
+    const objectIds = postIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const counts = await Promise.all([
+      Comment.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+      Share.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+      Reaction.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const [commentCounts, shareCounts, reactionCounts] = counts;
+
+    return postIds.map((postId) => {
+      const objId = new mongoose.Types.ObjectId(postId);
+
+      return {
+        postId: postId.toString(),
+        comments: commentCounts.find((c) => c._id.equals(objId))?.count || 0,
+        shares: shareCounts.find((s) => s._id.equals(objId))?.count || 0,
+        reactions: reactionCounts.find((r) => r._id.equals(objId))?.count || 0,
+      };
+    });
   }
 }
 

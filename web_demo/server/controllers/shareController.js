@@ -58,10 +58,10 @@ const deleteShare = async (req, res) => {
 
 const getSharesByUser = async (req, res) => {
   try {
-    const { uid } = req.params;
+    const { userId } = req.params;
     const { page, limit } = req.query;
     const result = await ShareService.getSharesByUser({
-      userId: uid,
+      userId,
       page: parseInt(page),
       limit: parseInt(limit),
     });

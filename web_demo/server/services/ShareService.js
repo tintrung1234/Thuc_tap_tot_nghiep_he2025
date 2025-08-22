@@ -2,6 +2,7 @@ const Share = require("../models/Share");
 const Post = require("../models/Post");
 const Notification = require("../models/Notification");
 const AuditLog = require("../models/AuditLog");
+const User = require("../models/User");
 
 class ShareService {
   static async getSharesByPost({ postId, page = 1, limit = 10 }) {
@@ -83,7 +84,7 @@ class ShareService {
   }
 
   static async getSharesByUser({ userId, page = 1, limit = 10 }) {
-    const user = await User.findOne({ uid: userId, isDeleted: false });
+    const user = await User.findOne({ _id: userId, isDeleted: false });
     if (!user) throw new Error("User not found");
 
     const skip = (page - 1) * limit;
@@ -94,7 +95,8 @@ class ShareService {
       .limit(limit)
       .select("postId platform createdAt");
     const total = await Share.countDocuments({ userId, isDeleted: false });
-    return { shares, total, page, limit };
+    const hasShared = true;
+    return { shares, hasShared, total, page, limit };
   }
 
   static async getShareStats({ postId }) {
