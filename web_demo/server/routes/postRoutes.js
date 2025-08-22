@@ -30,5 +30,6 @@ router.put(
   postController.updatePost
 );
 router.delete("/:slug", authMiddleware, postController.softDeletePost);
+router.post("/counts", postController.getPostCounts);
 
 module.exports = router;

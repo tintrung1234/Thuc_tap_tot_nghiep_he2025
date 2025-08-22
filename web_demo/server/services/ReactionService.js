@@ -2,6 +2,7 @@ const Reaction = require("../models/Reaction");
 const Post = require("../models/Post");
 const Notification = require("../models/Notification");
 const AuditLog = require("../models/AuditLog");
+const User = require("../models/User");
 
 class ReactionService {
   static async getReactionsByPost({ postId, page = 1, limit = 10 }) {
@@ -14,23 +15,24 @@ class ReactionService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("userId type createdAt");
+      .select("userId postId type createdAt");
     const total = await Reaction.countDocuments({ postId, isDeleted: false });
     return { reactions, total, page, limit };
   }
 
-  static async getUserReactionForPost({ postId, userId }) {
-    const post = await Post.findOne({ _id: postId, isDeleted: false });
-    if (!post) throw new Error("Post not found");
+  static async getUserReactionForPost({ userId }) {
+    const user = await User.findOne({ _id: userId, isDeleted: false });
+    if (!user) throw new Error("User not found");
 
     const reaction = await Reaction.findOne({
-      postId,
       userId,
       isDeleted: false,
     })
       .populate("userId", "username")
       .select("userId type createdAt");
-    return reaction || null;
+
+    const hasReacted = true;
+    return { reaction, hasReacted };
   }
 
   static async addReaction({ postId, type, userId, username }) {

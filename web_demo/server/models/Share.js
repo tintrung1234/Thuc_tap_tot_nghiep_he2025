@@ -2,8 +2,18 @@ const mongoose = require("mongoose");
 
 const shareSchema = new mongoose.Schema(
   {
-    postId: { type: String, required: true, ref: "Post", index: true },
-    userId: { type: String, required: true, ref: "User", index: true },
+    postId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Post",
+      index: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "User",
+      index: true,
+    },
     sharedTo: {
       type: String,
       enum: ["profile", "facebook", "twitter", "linkedin"],

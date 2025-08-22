@@ -17,10 +17,9 @@ const getReactionsByPost = async (req, res) => {
 
 const getUserReactionForPost = async (req, res) => {
   try {
-    const { postId, uid } = req.params;
+    const { userId } = req.params;
     const reaction = await ReactionService.getUserReactionForPost({
-      postId,
-      userId: uid,
+      userId,
     });
     res.json(reaction);
   } catch (error) {
