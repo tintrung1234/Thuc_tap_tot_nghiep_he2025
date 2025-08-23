@@ -14,16 +14,6 @@ const getAllPosts = async (req, res) => {
   }
 };
 
-const searchPosts = async (req, res, next) => {
-  try {
-    const { q, category, tags } = req.query;
-    const posts = await PostService.searchPosts({ q, category, tags });
-    res.status(200).json(posts);
-  } catch (error) {
-    next(error);
-  }
-};
-
 const getPostsByCategory = async (req, res) => {
   try {
     const { slug } = req.params;
@@ -184,7 +174,6 @@ const getPostCounts = async (req, res, next) => {
 
 module.exports = {
   getAllPosts,
-  searchPosts,
   getPostsByCategory,
   getPostsByTags,
   getPostBySlug,

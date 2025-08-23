@@ -14,7 +14,7 @@ const shareRoutes = require("./routes/shareRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const auditLogRoutes = require("./routes/auditLogRoutes");
 const statsRoutes = require("./routes/statsRoutes");
-const askRoutes = require("./routes/askRouter")
+const askRoutes = require("./routes/askRouter");
 const searchRouter = require("./routes/searchRoutes");
 
 const app = express();
