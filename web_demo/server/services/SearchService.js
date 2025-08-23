@@ -1,16 +1,18 @@
-const { pipeline } = require("@xenova/transformers");
 const ChromaModel = require("../models/ChromaModel");
 const OllamaModel = require("../models/OllamaModel");
 
 class SearchService {
   constructor() {
     this.embedder = null;
-    (async () => {
-      this.embedder = await pipeline(
-        "feature-extraction",
-        "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
-      );
-    })();
+    this._init();
+  }
+
+  async _init() {
+    const { pipeline } = await import("@xenova/transformers");
+    this.embedder = await pipeline(
+      "feature-extraction",
+      "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
+    );
   }
 
   async search(query) {

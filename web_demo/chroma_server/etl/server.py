@@ -1,56 +1,58 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from flask import Flask, request, jsonify
 from sentence_transformers import SentenceTransformer
 import chromadb
 from embedding import embed_batches  # file embed sẵn của bạn
 
-app = FastAPI()
+# --- Flask app ---
+app = Flask(__name__)
 
 # --- Global variables ---
 collection = None
 model = None
 
 
-class QueryRequest(BaseModel):
-    query: str
-    top_k: int = 5
-
-
-# --- Server startup event ---
-@app.on_event("startup")
+# --- Server startup ---
+@app.before_request
 def startup_event():
     global collection, model
+    if collection is None or model is None:
+        # Load Chroma collection
+        client = chromadb.PersistentClient(path="../chroma-data")
+        try:
+            collection = client.get_collection("blog_vi")
+        except Exception:
+            collection = client.create_collection(
+                "blog_vi", metadata={"hnsw:space": "cosine"}
+            )
 
-    # Load Chroma collection
-    client = chromadb.PersistentClient(path="../chroma-data")
-    try:
-        collection = client.get_collection("blog_vi")
-    except Exception:
-        collection = client.create_collection(
-            "blog_vi", metadata={"hnsw:space": "cosine"}
-        )
-
-    # Load embedding model
-    model = SentenceTransformer("keepitreal/vietnamese-sbert")
-    print("✅ Collection & embedding model ready")
+        # Load embedding model
+        model = SentenceTransformer("keepitreal/vietnamese-sbert")
+        print("✅ Collection & embedding model ready")
 
 
 # --- Query endpoint ---
-@app.post("/query")
-def query_docs(req: QueryRequest):
+@app.route("/query", methods=["POST"])
+def query_docs():
+    global collection, model
+
+    if collection is None or model is None:
+        return jsonify({"error": "Server chưa sẵn sàng. Hãy thử lại sau"}), 503
+
+    data = request.get_json(silent=True)
+    if not data or "query" not in data:
+        return jsonify({"error": "Body phải có query"}), 400
+
+    query = data.get("query")
+    top_k = int(data.get("top_k", 5))
+
     try:
-        global collection, model
-
-        if collection is None or model is None:
-            return {"error": "Server chưa sẵn sàng. Hãy thử lại sau"}
-
         # 1. Encode query
-        query_emb = embed_batches(model, [req.query], batch_size=1)
+        query_emb = embed_batches(model, [query], batch_size=1)
 
         # 2. Query Chroma
         results = collection.query(
-            query_embeddings=query_emb,  # không lấy [0]
-            n_results=req.top_k,
+            query_embeddings=query_emb,
+            n_results=top_k,
             include=["documents", "metadatas", "distances"],
         )
 
@@ -58,17 +60,74 @@ def query_docs(req: QueryRequest):
         metas = results.get("metadatas") or [[]]
         dists = results.get("distances") or [[]]
 
-        # Lấy list đầu tiên, nếu rỗng thì cho []
-        context_chunks = docs[0] if len(docs) > 0 else []
+        context_chunks = docs[0] if docs else []
         context_text = " ".join(context_chunks) if context_chunks else ""
 
-        return {
-            "query": req.query,
-            "context": context_text,
-            "chunks": context_chunks,
-            "metadatas": metas[0] if metas and len(metas) > 0 else [],
-            "distances": dists[0] if dists and len(dists) > 0 else [],
-        }
+        return jsonify(
+            {
+                "query": query,
+                "context": context_text,
+                "chunks": context_chunks,
+                "metadatas": metas[0] if metas else [],
+                "distances": dists[0] if dists else [],
+            }
+        )
+
     except Exception as e:
-        print("❌ Error in /query:", e)  # in ra console
-        raise HTTPException(status_code=500, detail=str(e))
+        print("❌ Error in /query:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# --- ETL endpoint ---
+@app.route("/etl/process", methods=["POST"])
+def process_etl():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"status": "error", "message": "Body phải là JSON"}), 400
+
+    action = data.get("action")
+    post = data.get("post")
+
+    if not action or not post:
+        return (
+            jsonify({"status": "error", "message": "Thiếu action hoặc post data"}),
+            400,
+        )
+
+    try:
+        if action == "upsert":
+            num_chunks = upsert_post(post, model, counter, collection, cfg)
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": f"Upsert {num_chunks} chunks cho post {post.get('post_id')}",
+                    }
+                ),
+                200,
+            )
+
+        elif action == "delete":
+            post_id = post.get("post_id")
+            num_deleted = delete_post_chunks(post_id, collection)
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": f"Deleted {num_deleted} chunks cho post {post_id}",
+                    }
+                ),
+                200,
+            )
+
+        else:
+            return jsonify({"status": "error", "message": "Invalid action"}), 400
+
+    except Exception as e:
+        print("❌ Error in /etl/process:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# --- Run server ---
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

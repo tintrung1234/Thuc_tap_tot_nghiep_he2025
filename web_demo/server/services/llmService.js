@@ -1,22 +1,11 @@
-// services/llmService.js
 const axios = require("axios");
-const dotenv = require("dotenv");
-
-dotenv.config();
-
-const API_KEY = process.env.OPENROUTER_API_KEY;
-if (!API_KEY) throw new Error("OPENROUTER_API_KEY chưa được set trong .env");
 
 async function askLLM(context, query) {
-
-    const url = "https://openrouter.ai/api/v1/chat/completions";
-    const headers = {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-    };
+    const url = "http://localhost:11434/api/chat"; // Ollama local endpoint
 
     const body = {
-        model: "deepseek/deepseek-chat-v3-0324:free", // hoặc model bạn chọn
+        model: "llama3",
+        stream: false, // ⚡ QUAN TRỌNG: để nhận response 1 lần
         messages: [
             {
                 role: "system",
@@ -33,8 +22,12 @@ async function askLLM(context, query) {
         ],
     };
 
-    const response = await axios.post(url, body, { headers });
-    return response.data.choices[0].message.content;
+    const response = await axios.post(url, body, {
+        headers: { "Content-Type": "application/json" },
+    });
+
+    // Với stream: false, Ollama trả về { message: { role, content }, ... }
+    return response.data.message.content;
 }
 
 module.exports = askLLM;

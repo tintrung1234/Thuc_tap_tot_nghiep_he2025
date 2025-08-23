@@ -2,7 +2,7 @@ const axios = require("axios");
 
 async function searchDoc(query) {
     try {
-        const response = await axios.post("http://localhost:8001/query", {
+        const response = await axios.post("http://localhost:8000/query", {
             query: query,
             top_k: 5
         });

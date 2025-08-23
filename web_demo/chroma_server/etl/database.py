@@ -8,7 +8,10 @@ from .embedding import embed_batches
 from .config import Config
 
 
-<<<<<<< HEAD
+def sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def upsert_post(
     post: dict,
     model: SentenceTransformer,
@@ -16,13 +19,6 @@ def upsert_post(
     collection,
     cfg: Config,
 ):
-=======
-def sha256(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, collection, cfg: Config):
->>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
     """Upsert một bài viết vào Chroma"""
     post_id = post.get("post_id")
     title = post.get("title", "")
@@ -89,7 +85,6 @@ def delete_post_chunks(post_id: str, collection):
     except Exception as e:
         print(f"Error deleting chunks for post {post_id}: {e}")
         return 0
-<<<<<<< HEAD
 
 
 def iter_posts_from_mongo(
@@ -107,5 +102,3 @@ def sha256(text: str) -> str:
     import hashlib
 
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-=======
->>>>>>> 8c85f0795c53fce17d374f036feaa43385697a02
