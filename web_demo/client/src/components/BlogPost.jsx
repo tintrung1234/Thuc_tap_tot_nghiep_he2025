@@ -1,6 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
+import { FaHeart, FaShare, FaComment } from "react-icons/fa";
 
-const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
+const BlogPost = ({
+  slug,
+  category,
+  title,
+  description,
+  tags,
+  imageUrl,
+  reactions,
+  shares,
+  comments,
+}) => {
   const navigate = useNavigate();
 
   const handleDetailClick = () => {
@@ -67,6 +78,19 @@ const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
               #{tagItem.name}
             </Link>
           ))}
+        </div>
+
+        {/* Reactions, Shares, Comments */}
+        <div className="mt-3 flex items-center gap-4 text-gray-500 text-sm">
+          <span className="flex items-center gap-1">
+            <FaHeart className="text-red-500" /> {reactions || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FaShare className="text-blue-500" /> {shares || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FaComment className="text-gray-500" /> {comments || 0}
+          </span>
         </div>
       </div>
     </div>

@@ -388,7 +388,7 @@ export default function WriteBlogPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Viết nội dung tóm tắt tại đây"
-                  className="mt-2 text-[18px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+                  className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
                 />
               </div>
 
