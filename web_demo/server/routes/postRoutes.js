@@ -9,7 +9,6 @@ const upload = multer({
 });
 
 router.get("/", postController.getAllPosts);
-// router.get("/search", postController.searchPosts);
 router.get("/category/:slug", postController.getPostsByCategory);
 router.get("/tags/:slug", postController.getPostsByTags);
 router.get("/top", postController.getTopPost);

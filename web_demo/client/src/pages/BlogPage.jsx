@@ -8,6 +8,7 @@ import BlogSkeleton from "../components/BlogSkeleton";
 import TopPostSkeleton from "../components/TopPostSkeleton";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { FaHeart, FaShare, FaComment } from "react-icons/fa";
 
 function BlogPage() {
   const [posts, setPosts] = useState([]);
@@ -19,7 +20,7 @@ function BlogPage() {
   const [totalPages, setTotalPages] = useState(1);
   const navigate = useNavigate();
 
-  // Fetch all posts with pagination
+  // Fetch all posts with pagination and counts
   useEffect(() => {
     const getAllPosts = async () => {
       setLoadingPosts(true);
@@ -27,7 +28,27 @@ function BlogPage() {
         const response = await axios.get(
           `http://localhost:5000/api/posts?page=${currentPage}&limit=${postsPerPage}`
         );
-        setPosts(response.data.posts || []);
+        const postsData = response.data.posts || [];
+
+        // Fetch counts for all posts in bulk
+        const postIds = postsData.map((post) => post._id);
+        const countsResponse = await axios.post(
+          `http://localhost:5000/api/posts/counts`,
+          { postIds }
+        );
+        const counts = countsResponse.data;
+
+        const postsWithCounts = postsData.map((post) => {
+          const countData = counts.find((c) => c.postId === post._id) || {};
+          return {
+            ...post,
+            reactions: countData.reactions || 0,
+            shares: countData.shares || 0,
+            comments: countData.comments || 0,
+          };
+        });
+
+        setPosts(postsWithCounts);
         setTotalPages(Math.ceil(response.data.total / postsPerPage));
       } catch (error) {
         toast.error("Không thể tải danh sách bài viết. Vui lòng thử lại sau!");
@@ -36,19 +57,40 @@ function BlogPage() {
         setLoadingPosts(false);
       }
     };
+
     getAllPosts();
   }, [currentPage]);
 
-  // Fetch top post once
+  // Fetch top post with counts
   useEffect(() => {
     const getTopPost = async () => {
       setLoadingTopPost(true);
       try {
         const response = await axios.get(`http://localhost:5000/api/posts/top`);
-        setTopPost(response.data || null);
+        const topPostData = response.data;
+
+        if (topPostData) {
+          const countsResponse = await axios.post(
+            `http://localhost:5000/api/posts/counts`,
+            {
+              postIds: [topPostData._id],
+            }
+          );
+          const countData = countsResponse.data[0] || {};
+
+          setTopPost({
+            ...topPostData,
+            reactions: countData.reactions || 0,
+            shares: countData.shares || 0,
+            comments: countData.comments || 0,
+          });
+        } else {
+          setTopPost(null);
+        }
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài viết top 1!");
         console.error("Error fetching top blog:", error);
+        setTopPost(null);
       } finally {
         setLoadingTopPost(false);
       }
@@ -85,7 +127,7 @@ function BlogPage() {
         {loadingTopPost ? (
           <TopPostSkeleton />
         ) : topPost ? (
-          <div className="bg-[#f4f0fa] py-4 px-6 md:px-16 md:py-8">
+          <div className="bg-[#e6ddf4] py-4 px-6 md:px-16 md:py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div>
                 <p className="uppercase tracking-wide text-sm text-gray-600 mb-2">
@@ -111,8 +153,21 @@ function BlogPage() {
                       "",
                   }}
                 ></h2>
+                <div className="mt-3 flex items-center gap-4 text-gray-500 text-sm">
+                  <span className="flex items-center gap-1">
+                    <FaHeart className="text-red-500" />{" "}
+                    {topPost.reactions || 0}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <FaShare className="text-blue-500" /> {topPost.shares || 0}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <FaComment className="text-gray-500" />{" "}
+                    {topPost.comments || 0}
+                  </span>
+                </div>
                 <button
-                  className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-sm hover:bg-yellow-500 transition duration-200"
+                  className="bg-yellow-400 text-black font-semibold px-6 py-2 rounded-sm hover:bg-yellow-500 transition duration-200 mt-4"
                   onClick={() => handleDetailClick(topPost.slug)}
                 >
                   Xem thêm {">"}
@@ -122,7 +177,7 @@ function BlogPage() {
                 <img
                   src={topPost.imageUrl}
                   alt="Featured Post"
-                  className="w-full max-w-md shadow"
+                  className="w-full h-[60vh] max-w-md shadow"
                 />
               </div>
             </div>

@@ -76,7 +76,7 @@ def upsert_post(
 
 
 def delete_post_chunks(post_id: str, collection):
-    """Xóa tất cả chunks của bài viết khỏi Chroma"""
+    """Xóa chunks của bài viết khỏi Chroma"""
     try:
         results = collection.get(where={"post_id": post_id})
         if results["ids"]:
@@ -85,20 +85,3 @@ def delete_post_chunks(post_id: str, collection):
     except Exception as e:
         print(f"Error deleting chunks for post {post_id}: {e}")
         return 0
-
-
-def iter_posts_from_mongo(
-    mongo_client, db_name: str, collection_name: str, status: str = "published"
-):
-    """Lấy các bài viết từ MongoDB với trạng thái published"""
-    db = mongo_client[db_name]
-    collection = db[collection_name]
-    query = {"status": status, "isDeleted": False}
-    for post in collection.find(query):
-        yield post
-
-
-def sha256(text: str) -> str:
-    import hashlib
-
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()

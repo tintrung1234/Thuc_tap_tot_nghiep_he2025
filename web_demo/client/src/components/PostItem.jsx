@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FaHeart, FaShare, FaComment } from "react-icons/fa";
 
 const PostItem = ({ post }) => {
   const navigate = useNavigate();
@@ -58,6 +59,18 @@ const PostItem = ({ post }) => {
             ))}
           </div>
         )}
+        {/* Reactions, Shares, Comments */}
+        <div className="mt-3 flex items-center gap-4 text-gray-500 text-sm">
+          <span className="flex items-center gap-1">
+            <FaHeart className="text-red-500" /> {post.reactions || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FaShare className="text-blue-500" /> {post.shares || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FaComment className="text-gray-500" /> {post.comments || 0}
+          </span>
+        </div>
       </div>
     </div>
   );

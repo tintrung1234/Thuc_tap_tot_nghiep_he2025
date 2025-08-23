@@ -4,7 +4,7 @@ class OllamaModel {
   constructor() {
     this.llm = new Ollama({
       baseUrl: "http://localhost:11434",
-      model: "mistral", // Hoặc 'llama2'
+      model: "llama3", // Hoặc 'llama2'
     });
   }
 

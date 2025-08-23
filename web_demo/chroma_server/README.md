@@ -70,10 +70,11 @@ Chạy chroma server:
 chroma run --path ./chroma-data --port 8000
 ```
 
-Chạy Ollama:
+Cách chạy file server:
 
 ```bash
-ollama run mistral
+cd etl
+uvicorn server:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ---
@@ -130,6 +131,7 @@ else:
     │   ├── config.py
     │   ├── database.py
     │   ├── embedding.py
+    │   ├── server.py
     │   ├── main.py
     │   └── text_processing.py
     ├── requirements.txt

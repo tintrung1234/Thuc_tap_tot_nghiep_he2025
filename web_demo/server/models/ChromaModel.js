@@ -2,7 +2,7 @@ const { ChromaClient } = require("chromadb");
 
 class ChromaModel {
   constructor() {
-    this.client = new ChromaClient({ path: "http://localhost:8000" });
+    this.client = new ChromaClient({ path: "http://localhost:9000" });
     this.collectionName = "blog_vi";
   }
 

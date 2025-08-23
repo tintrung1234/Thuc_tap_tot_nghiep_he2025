@@ -14,7 +14,6 @@ const shareRoutes = require("./routes/shareRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const auditLogRoutes = require("./routes/auditLogRoutes");
 const statsRoutes = require("./routes/statsRoutes");
-const askRoutes = require("./routes/askRouter")
 const searchRouter = require("./routes/searchRoutes");
 
 const app = express();
@@ -36,7 +35,6 @@ app.use("/api/contacts", contactRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/stats", statsRoutes);
-app.use("/api/ask", askRoutes);
-// app.use("/api/search", searchRouter);
+app.use("/api/search", searchRouter);
 
 module.exports = app;
