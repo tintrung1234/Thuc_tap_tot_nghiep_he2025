@@ -6,8 +6,11 @@ const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
 const Share = require("../models/Share");
+const Comment = require("../models/Comment");
+const Reaction = require("../models/Reaction");
 const cloudinary = require("../config/cloudinary");
 const createError = require("http-errors");
+const slugify = require("slugify");
 
 class PostService {
   static async getAllPosts({ page = 1, limit = 10 }) {
@@ -20,7 +23,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views createdAt"
+        "title slug content description imageUrl category tags views createdAt status isDeleted"
       );
     const total = await Post.countDocuments({
       status: "published",
@@ -28,32 +31,6 @@ class PostService {
     });
 
     return { posts, total, page, limit };
-  }
-
-  static async searchPosts({ q, category, tags }) {
-    let query = { isDeleted: false, status: "published" };
-
-    if (q) {
-      query.$or = [
-        { title: { $regex: q, $options: "i" } },
-        { description: { $regex: q, $options: "i" } },
-        { content: { $regex: q, $options: "i" } },
-      ];
-    }
-
-    if (category) {
-      query.category = category;
-    }
-
-    if (tags) {
-      query.tags = { $in: [tags] };
-    }
-
-    const posts = await Post.find(query)
-      .populate("category", "_id name slug")
-      .populate("tags", "_id name slug")
-      .populate("uid", "_id username photoUrl");
-    return posts;
   }
 
   static async getPostsByCategory({ categorySlug, page = 1, limit = 10 }) {
@@ -215,10 +192,11 @@ class PostService {
       }
     }
 
-    const slug = title
-      .toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "");
+    const slug = slugify(title, {
+      lower: true,
+      locale: "vi", // hỗ trợ tốt tiếng Việt
+      strict: true, // bỏ ký tự đặc biệt
+    });
 
     // Handle image upload
     let imageUrl = "";
@@ -304,10 +282,11 @@ class PostService {
 
     if (title) {
       post.title = title;
-      let slug = title
-        .toLowerCase()
-        .replace(/ /g, "-")
-        .replace(/[^\w-]+/g, "");
+      const slug = slugify(title, {
+        lower: true,
+        locale: "vi", // hỗ trợ tốt tiếng Việt
+        strict: true, // bỏ ký tự đặc biệt
+      });
 
       const existingPost = await Post.findOne({
         slug,
@@ -401,6 +380,38 @@ class PostService {
     });
 
     return { message: "Post soft deleted" };
+  }
+
+  static async getPostCounts(postIds) {
+    const objectIds = postIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    const counts = await Promise.all([
+      Comment.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+      Share.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+      Reaction.aggregate([
+        { $match: { postId: { $in: objectIds }, isDeleted: false } },
+        { $group: { _id: "$postId", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const [commentCounts, shareCounts, reactionCounts] = counts;
+
+    return postIds.map((postId) => {
+      const objId = new mongoose.Types.ObjectId(postId);
+
+      return {
+        postId: postId.toString(),
+        comments: commentCounts.find((c) => c._id.equals(objId))?.count || 0,
+        shares: shareCounts.find((s) => s._id.equals(objId))?.count || 0,
+        reactions: reactionCounts.find((r) => r._id.equals(objId))?.count || 0,
+      };
+    });
   }
 }
 

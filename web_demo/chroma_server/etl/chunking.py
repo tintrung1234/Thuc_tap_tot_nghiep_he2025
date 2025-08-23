@@ -1,5 +1,6 @@
 from typing import List, Tuple
 from sentence_transformers import SentenceTransformer
+from .text_processing import split_sentences
 
 
 class TokenCounter:
@@ -11,8 +12,6 @@ class TokenCounter:
 
 
 def chunk_by_sentences(text: str, counter: TokenCounter, max_tokens: int, overlap: int) -> List[Tuple[str, Tuple[int, int]]]:
-    from .text_processing import split_sentences
-
     if not text:
         return []
 
@@ -50,7 +49,6 @@ def chunk_by_sentences(text: str, counter: TokenCounter, max_tokens: int, overla
                 end = buf[-1][1][1]
                 chunks.append((chunk_text, (start, end)))
 
-                # overlap
                 if overlap > 0:
                     overlap_buf = []
                     tok = 0

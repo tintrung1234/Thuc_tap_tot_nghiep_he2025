@@ -46,9 +46,8 @@ sử dụng: - **Chunking + Vietnamese NLP** (underthesea) -
         OVERLAP=
         BATCH_SIZE=
         CHROMA_PATH=
-        MONGO_URI=
-        MONGO_DB=
-        MONGO_COLLECTION=
+        BACKEND_API_URL=
+        ETL_API_URL=
 
 ---
 
@@ -63,6 +62,19 @@ Chạy ETL để load dữ liệu vào Chroma:
 
 ```bash
 python -m etl.main
+```
+
+Chạy chroma server:
+
+```bash
+chroma run --path ./chroma-data --port 8000
+```
+
+Cách chạy file server:
+
+```bash
+cd etl
+uvicorn server:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ---
@@ -119,6 +131,7 @@ else:
     │   ├── config.py
     │   ├── database.py
     │   ├── embedding.py
+    │   ├── server.py
     │   ├── main.py
     │   └── text_processing.py
     ├── requirements.txt

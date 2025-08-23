@@ -17,6 +17,8 @@ const SearchResultsPage = () => {
   const [selectedTag, setSelectedTag] = useState("");
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
+  const [ragAnswer, setRagAnswer] = useState(""); // State cho câu trả lời từ LLM
+  const [relatedChunks, setRelatedChunks] = useState([]); // State cho các chunk từ Chroma
   const postsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -36,7 +38,7 @@ const SearchResultsPage = () => {
         );
         setTags(tagsResponse.data.tags);
 
-        // Fetch posts
+        // Fetch posts với tìm kiếm cơ bản
         const params = new URLSearchParams();
         if (searchQuery) params.append("q", searchQuery);
         if (selectedCategory) params.append("category", selectedCategory);
@@ -45,6 +47,20 @@ const SearchResultsPage = () => {
           `http://localhost:5000/api/posts/search?${params.toString()}`
         );
         setPosts(postsResponse.data);
+
+        // Tích hợp tìm kiếm thông minh với RAG nếu query có vẻ là câu hỏi
+        if (isQuestion(searchQuery)) {
+          const ragResponse = await axios.post(
+            "http://localhost:5000/api/search",
+            {
+              query: searchQuery,
+            }
+          );
+          setRagAnswer(
+            ragResponse.data.answer || "Không có câu trả lời phù hợp."
+          );
+          setRelatedChunks(ragResponse.data.chunks || []);
+        }
       } catch (error) {
         toast.error("Không thể tải dữ liệu. Vui lòng thử lại sau!");
         console.error("Error fetching data:", error);
@@ -64,7 +80,7 @@ const SearchResultsPage = () => {
     setSelectedTag(tag);
   }, [searchParams]);
 
-  // Client-side filtering
+  // Client-side filtering cho posts cơ bản
   useEffect(() => {
     let filtered = posts;
 
@@ -92,10 +108,31 @@ const SearchResultsPage = () => {
     setFilteredPosts(filtered);
   }, [posts, searchQuery, selectedCategory, selectedTag]);
 
+  // Kiểm tra nếu query là câu hỏi (ví dụ đơn giản: kết thúc bằng "?" hoặc dài > 5 từ)
+  const isQuestion = (q) => {
+    return q.trim().endsWith("?") || q.trim().split(" ").length > 5;
+  };
+
+  // Ghép posts cơ bản với relatedChunks từ Chroma (nếu có)
+  const combinedPosts = [
+    ...filteredPosts,
+    ...relatedChunks.map((chunk) => ({
+      _id: chunk.metadata.post_id,
+      title: chunk.metadata.title,
+      slug: chunk.metadata.url.split("/").pop(), // Extract slug from url
+      description: chunk.content.substring(0, 200) + "...", // Use chunk content as description
+      content: chunk.content,
+      category: {}, // Mock if needed
+      tags: [], // Mock if needed
+      imageUrl: "", // Mock
+      uid: {}, // Mock
+    })),
+  ];
+
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const currentPosts = combinedPosts.slice(indexOfFirstPost, indexOfLastPost);
+  const totalPages = Math.ceil(combinedPosts.length / postsPerPage);
 
   const handlePrev = () => {
     if (currentPage > 1) {
@@ -116,6 +153,17 @@ const SearchResultsPage = () => {
       <h1 className="text-3xl font-bold mb-8">
         Kết quả tìm kiếm cho "{searchQuery || "Tất cả"}"
       </h1>
+
+      {/* Hiển thị câu trả lời từ LLM nếu query là câu hỏi */}
+      {ragAnswer && (
+        <div className="mb-8 p-4 bg-gray-100 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-2">
+            Câu trả lời thông minh:
+          </h2>
+          <p className="text-gray-700">{ragAnswer}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="col-span-2">
           {loading ? (

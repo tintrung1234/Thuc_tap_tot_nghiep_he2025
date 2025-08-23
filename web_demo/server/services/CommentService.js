@@ -14,7 +14,7 @@ class CommentService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("userId content createdAt");
+      .select("userId postId content createdAt");
     const total = await Comment.countDocuments({ postId, isDeleted: false });
     return { comments, total, page, limit };
   }

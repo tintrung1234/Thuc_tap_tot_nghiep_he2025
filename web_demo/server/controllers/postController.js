@@ -1,4 +1,5 @@
 const PostService = require("../services/PostService");
+const createError = require("http-errors");
 
 const getAllPosts = async (req, res) => {
   try {
@@ -10,16 +11,6 @@ const getAllPosts = async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-};
-
-const searchPosts = async (req, res, next) => {
-  try {
-    const { q, category, tags } = req.query;
-    const posts = await PostService.searchPosts({ q, category, tags });
-    res.status(200).json(posts);
-  } catch (error) {
-    next(error);
   }
 };
 
@@ -168,9 +159,21 @@ const softDeletePost = async (req, res) => {
   }
 };
 
+const getPostCounts = async (req, res, next) => {
+  try {
+    const { postIds } = req.body;
+    if (!Array.isArray(postIds) || postIds.length === 0) {
+      throw createError(400, "postIds must be a non-empty array");
+    }
+    const counts = await PostService.getPostCounts(postIds);
+    res.status(200).json(counts);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllPosts,
-  searchPosts,
   getPostsByCategory,
   getPostsByTags,
   getPostBySlug,
@@ -181,4 +184,5 @@ module.exports = {
   getPostsByUser,
   updatePost,
   softDeletePost,
+  getPostCounts,
 };

@@ -5,7 +5,8 @@ const authMiddleware = require("../middlewares/authMiddleware");
 
 router.get("/post/:postId", reactionController.getReactionsByPost);
 router.get(
-  "/post/:postId/user/:uid",
+  "/user/:userId",
+  authMiddleware,
   reactionController.getUserReactionForPost
 );
 router.post("/", authMiddleware, reactionController.addReaction);
