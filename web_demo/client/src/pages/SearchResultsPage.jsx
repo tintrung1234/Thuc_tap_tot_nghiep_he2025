@@ -17,8 +17,8 @@ const SearchResultsPage = () => {
   const [selectedTag, setSelectedTag] = useState("");
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
-  const [ragAnswer, setRagAnswer] = useState(""); // State cho câu trả lời từ LLM
-  const [relatedChunks, setRelatedChunks] = useState([]); // State cho các chunk từ Chroma
+  const [ragAnswer, setRagAnswer] = useState("");
+  const [relatedChunks, setRelatedChunks] = useState([]);
   const postsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -38,7 +38,7 @@ const SearchResultsPage = () => {
         );
         setTags(tagsResponse.data.tags);
 
-        // Fetch posts với tìm kiếm cơ bản
+        // Fetch posts
         const params = new URLSearchParams();
         if (searchQuery) params.append("q", searchQuery);
         if (selectedCategory) params.append("category", selectedCategory);
@@ -46,15 +46,34 @@ const SearchResultsPage = () => {
         const postsResponse = await axios.get(
           `http://localhost:5000/api/posts/search?${params.toString()}`
         );
-        setPosts(postsResponse.data);
+        const postsData = postsResponse.data.posts || [];
 
-        // Tích hợp tìm kiếm thông minh với RAG nếu query có vẻ là câu hỏi
+        console.log(postsData);
+        // Fetch counts for all posts in bulk
+        const postIds = postsData.map((post) => post._id);
+        const countsResponse = await axios.post(
+          `http://localhost:5000/api/posts/counts`,
+          { postIds }
+        );
+        const counts = countsResponse.data;
+
+        const postsWithCounts = postsData.map((post) => {
+          const countData = counts.find((c) => c.postId === post._id) || {};
+          return {
+            ...post,
+            reactions: countData.reactions || 0,
+            shares: countData.shares || 0,
+            comments: countData.comments || 0,
+          };
+        });
+
+        setPosts(postsWithCounts);
+
+        // Fetch RAG search if query is a question
         if (isQuestion(searchQuery)) {
           const ragResponse = await axios.post(
-            "http://localhost:5000/api/search",
-            {
-              query: searchQuery,
-            }
+            "http://localhost:5000/api/ask",
+            { query: searchQuery }
           );
           setRagAnswer(
             ragResponse.data.answer || "Không có câu trả lời phù hợp."
@@ -80,7 +99,7 @@ const SearchResultsPage = () => {
     setSelectedTag(tag);
   }, [searchParams]);
 
-  // Client-side filtering cho posts cơ bản
+  // Client-side filtering for posts
   useEffect(() => {
     let filtered = posts;
 
@@ -108,24 +127,27 @@ const SearchResultsPage = () => {
     setFilteredPosts(filtered);
   }, [posts, searchQuery, selectedCategory, selectedTag]);
 
-  // Kiểm tra nếu query là câu hỏi (ví dụ đơn giản: kết thúc bằng "?" hoặc dài > 5 từ)
+  // Check if query is a question
   const isQuestion = (q) => {
     return q.trim().endsWith("?") || q.trim().split(" ").length > 5;
   };
 
-  // Ghép posts cơ bản với relatedChunks từ Chroma (nếu có)
+  // Combine posts with relatedChunks from RAG
   const combinedPosts = [
     ...filteredPosts,
     ...relatedChunks.map((chunk) => ({
       _id: chunk.metadata.post_id,
       title: chunk.metadata.title,
-      slug: chunk.metadata.url.split("/").pop(), // Extract slug from url
-      description: chunk.content.substring(0, 200) + "...", // Use chunk content as description
+      slug: chunk.metadata.url.split("/").pop(),
+      description: chunk.content.substring(0, 200) + "...",
       content: chunk.content,
-      category: {}, // Mock if needed
-      tags: [], // Mock if needed
-      imageUrl: "", // Mock
-      uid: {}, // Mock
+      category: chunk.metadata.category || {},
+      tags: chunk.metadata.tags || [],
+      imageUrl: chunk.metadata.imageUrl || "",
+      uid: chunk.metadata.uid || {},
+      reactions: 0, // No counts for chunks
+      shares: 0,
+      comments: 0,
     })),
   ];
 
@@ -154,7 +176,7 @@ const SearchResultsPage = () => {
         Kết quả tìm kiếm cho "{searchQuery || "Tất cả"}"
       </h1>
 
-      {/* Hiển thị câu trả lời từ LLM nếu query là câu hỏi */}
+      {/* Display LLM answer if query is a question */}
       {ragAnswer && (
         <div className="mb-8 p-4 bg-gray-100 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-2">
@@ -180,6 +202,9 @@ const SearchResultsPage = () => {
                   tags={post.tags || []}
                   imageUrl={post.imageUrl}
                   author={post.uid}
+                  reactions={post.reactions}
+                  shares={post.shares}
+                  comments={post.comments}
                 />
               ))}
               <PaginationControls
