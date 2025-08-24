@@ -128,7 +128,7 @@ client/
 - **Animations**: AOS for smooth scroll animations.
 - **Routing**: React Router DOM for seamless page navigation.
 
-## 🌐 API Integration
+## 🌐 API Integration Feature
 
 ### POST `/api/search`
 
@@ -138,31 +138,6 @@ client/
   axios
     .post(`${import.meta.env.VITE_API_URL}/search`, { query: "Ẩm thực Hà Nội" })
     .then((res) => console.log(res.data.chunks, res.data.answer));
-  ```
-
-### GET `/api/posts`
-
-- Fetches posts with filters (e.g., `status=published`, `isDeleted=false`).
-- Example:
-  ```javascript
-  axios
-    .get(
-      `${import.meta.env.VITE_API_URL}/posts?status=published&isDeleted=false`
-    )
-    .then((res) => console.log(res.data));
-  ```
-
-### POST `/api/posts`
-
-- Creates a post (requires authentication and image upload).
-- Example:
-  ```javascript
-  const formData = new FormData();
-  formData.append("title", "Test Post");
-  formData.append("image", imageFile);
-  axios.post(`${import.meta.env.VITE_API_URL}/posts`, formData, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
   ```
 
 ## 🐞 Debugging

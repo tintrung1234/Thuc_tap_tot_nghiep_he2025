@@ -208,59 +208,6 @@ ETL_API_URL=
   }
   ```
 
-### GET `/api/posts`
-
-- **Description**: Fetches all published posts with optional filters.
-- **Query Parameters**:
-  - `q`: Search query (searches title, description, content).
-  - `category`: Category ID.
-  - `tags`: Tag ID.
-  - `status`: Post status (e.g., "published").
-  - `isDeleted`: Filter deleted posts (true/false).
-- **Example**:
-  ```
-  GET /api/posts?status=published&isDeleted=false
-  ```
-- **Response**:
-  ```json
-  [
-    {
-      "_id": "123",
-      "title": "Giới thiệu Hà Nội",
-      "slug": "gioi-thieu-ha-noi",
-      "description": "Thủ đô Việt Nam",
-      "content": "<p>Hà Nội là thủ đô của Việt Nam...</p>",
-      "imageUrl": "https://res.cloudinary.com/daeorkmlh/image/upload/...",
-      "category": {},
-      "tags": [],
-      "status": "published",
-      "isDeleted": false
-    }
-  ]
-  ```
-
-### POST `/api/posts`
-
-- **Description**: Creates a new post and triggers ETL (upsert to Chroma). Requires authentication.
-- **Request Body** (multipart/form-data for image):
-  ```json
-  {
-    "uid": "user_id",
-    "title": "Ẩm thực Hà Nội",
-    "slug": "am-thuc-ha-noi",
-    "description": "Món ngon Hà Nội",
-    "content": "<p>Phở là món ăn nổi tiếng ở Hà Nội.</p>",
-    "category": "category_id",
-    "tags": [],
-    "status": "published",
-    "image": "<file>"
-  }
-  ```
-- **Headers**:
-  ```
-  Authorization: Bearer <token>
-  ```
-
 ## 🛠️ ETL Integration
 
 - The backend communicates with a Python ETL pipeline (running at `ETL_API_URL`).
