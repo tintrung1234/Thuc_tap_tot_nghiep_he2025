@@ -1,5 +1,6 @@
 const ChromaModel = require("../models/ChromaModel");
 const OllamaModel = require("../models/OllamaModel");
+const { pipeline } = require("@xenova/transformers");
 
 class SearchService {
   constructor() {
@@ -8,10 +9,9 @@ class SearchService {
   }
 
   async _init() {
-    const { pipeline } = await import("@xenova/transformers");
     this.embedder = await pipeline(
       "feature-extraction",
-      "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
+      process.env.EMBED_MODEL || "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
     );
   }
 
@@ -26,6 +26,7 @@ class SearchService {
       normalize: true,
     });
     const queryEmbedding = Array.from(embedding.data);
+
     // Retrieval từ Chroma
     const results = await ChromaModel.query(queryEmbedding, 3);
 
@@ -34,11 +35,13 @@ class SearchService {
       .map((doc, index) => `Nội dung bài viết ${index + 1}: ${doc}`)
       .join("\n");
 
-    const prompt = `Bạn là trợ lý chỉ được phép trả lời dựa trên CONTEXT sau. Nếu câu trả lời có trong CONTEXT, hãy trích nguyên văn hoặc diễn giải ngắn gọn. Nếu không có, hãy trả lời đúng câu: "Mình chưa thấy thông tin trong dữ liệu.Trả lời bằng tiếng Việt"
-                CONTEXT:
+    const prompt = `Bạn là trợ lý AI cho một blog. Hãy trả lời CHÍNH XÁC dựa trên ngữ cảnh.
+                Nếu không có thông tin trong ngữ cảnh, hãy trả lời: "Tôi không biết từ nội dung blog."
+                ---------------- NGỮ CẢNH ----------------
                 ${context}
+                -----------------------------------------
                 Câu hỏi: ${query}
-                Trả lời:`;
+                Yêu cầu: trả lời ngắn gọn, bằng tiếng Việt, có trích dẫn nguồn (slug/tiêu đề nếu có).`;
 
     // Generation từ LLM
     const answer = await OllamaModel.generate(prompt);
@@ -48,7 +51,7 @@ class SearchService {
         content: doc,
         metadata: results.metadatas[0][index],
       })),
-      answer: answer.text || answer, // Điều chỉnh tùy LLM response
+      answer: answer.text || answer,
     };
   }
 }

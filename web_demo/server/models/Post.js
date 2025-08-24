@@ -36,7 +36,7 @@ const postSchema = new mongoose.Schema(
 
 // Middleware để gửi data đến ETL API sau save
 postSchema.post("save", async function (doc) {
-  const etlUrl = "http://localhost:5001/etl/process"; // ETL API endpoint
+  const etlUrl = process.env.ETL_API_URL || "http://localhost:5001/etl/process";
   const action =
     doc.status === "published" && !doc.isDeleted ? "upsert" : "delete";
   const postData = {
