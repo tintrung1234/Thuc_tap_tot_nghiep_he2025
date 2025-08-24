@@ -1,0 +1,11 @@
+{
+  "action": "upsert",
+  "post": {
+    "post_id": "post_001",
+    "title": "Giới thiệu về Machine Learning",
+    "slug": "gioi-thieu-ve-machine-learning",
+    "content": "Machine Learning là một nhánh của trí tuệ nhân tạo (AI), cho phép máy tính học từ dữ liệu mà không cần lập trình rõ ràng.",
+    "status": "published",
+    "isDeleted": false
+  }
+}
