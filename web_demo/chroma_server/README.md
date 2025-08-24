@@ -39,7 +39,7 @@ sử dụng: - **Chunking + Vietnamese NLP** (underthesea) -
 
 3.  **Cấu hình**
 
-        - File `.env` chứa config (ví dụ `DB_PATH`, `EMBEDDING_MODEL`).
+        - File `.env` chứa config (ví dụ `CHROMA_PATH`, `EMBED_MODEL`).
         CHROMA_COLLECTION=
         EMBED_MODEL=
         MAX_TOKENS=
@@ -70,14 +70,11 @@ Chạy chroma server:
 chroma run --path ./chroma-data --port 8000
 ```
 
-Cách chạy file server:
+Lệnh chạy etl với với argument --post, không cần API từ NodeJSs
 
 ```bash
-cd etl
-uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+python -m etl.main --post posts.json
 ```
-
----
 
 ## 🔍 Query dữ liệu
 
@@ -136,6 +133,10 @@ else:
     │   └── text_processing.py
     ├── requirements.txt
     ├── .env
+    ├── .gitignore
+    ├── posts.jsonl
+    ├── return_etl.py
+    ├── test.py
     └── README.md
 
 ---
@@ -153,9 +154,3 @@ else:
 ## 📜 License
 
 MIT License © 2025
-
-# Cách chạy file server:
-Vào thư mục etl
-
-python server.py
-
