@@ -88,6 +88,12 @@ To start the ETL API server:
 python -m etl.main
 ```
 
+Can run ETL with json file without api NodeJS:
+
+```bash
+python -m etl.main --post posts.json
+```
+
 To start the Chroma server:
 
 ```bash
@@ -151,7 +157,8 @@ chroma_server/
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Environment variables
 ├── .gitignore
-├── rerun_etl.py            # Script to re-run ETL
+├── return_etl.py           # Script to re-run ETL
+├── posts.json              # Post json to run with arugement
 ├── test.py                 # Test scripts
 └── README.md
 ```
@@ -167,7 +174,7 @@ chroma_server/
 
 - **Chroma has no data**:
 
-  - Run `python rerun_etl.py` to populate the `blog_vi` collection.
+  - Run `python return_etl.py` to populate the `blog_vi` collection.
 
 - **ETL API errors**:
 
