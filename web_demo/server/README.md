@@ -15,6 +15,7 @@ This is a backend for a blog search application with intelligent search capabili
 - [RAG Search](#rag-search)
 - [Debugging](#debugging)
 - [Future Improvements](#future-improvements)
+- [License](#license)
 
 ## Technologies
 
@@ -107,6 +108,46 @@ OLLAMA_MODEL=
 EMBED_MODEL=
 ETL_API_URL=
 ```
+
+# MongoDB & Authentication
+
+MONGODB_URI= # MongoDB connection string
+JWT_SECRET= # Secret key for JWT authentication
+
+# Cloudinary (for image hosting)
+
+CLOUDINARY_CLOUD_NAME= # Cloudinary account name
+CLOUDINARY_API_KEY= # Cloudinary API key
+CLOUDINARY_API_SECRET= # Cloudinary API secret
+
+# Express Server
+
+PORT= # Port for the Express server
+
+# Chroma Vector Database
+
+CHROMA_HOST= # Host of the Chroma vector database
+CHROMA_PORT= # Port of the Chroma vector database
+CHROMA_SSL= # Enable SSL (true/false)
+CHROMA_COLLECTION= # Name of the Chroma collection
+CHROMA_PATH= # Directory for storing Chroma data
+
+# Embedding & Chunking
+
+EMBED_MODEL= # Sentence-Transformers model for embeddings
+MAX_TOKENS= # Maximum tokens per text chunk
+OVERLAP= # Token overlap between chunks
+BATCH_SIZE= # Batch size for embedding
+
+# Ollama (LLM service)
+
+OLLAMA_BASE_URL= # Base URL of the Ollama server
+OLLAMA_MODEL= # LLM model used by Ollama
+
+# APIs
+
+BACKEND_API_URL= # NodeJS backend API for fetching posts
+ETL_API_URL= # Flask ETL API endpoint for upsert/delete
 
 ## Running the Application
 
@@ -239,3 +280,7 @@ ETL_API_URL=
 - Implement RabbitMQ for async ETL processing.
 - Optimize RAG with custom prompt templates.
 - Deploy with Docker Compose for production.
+
+## License
+
+MIT License © 2025
