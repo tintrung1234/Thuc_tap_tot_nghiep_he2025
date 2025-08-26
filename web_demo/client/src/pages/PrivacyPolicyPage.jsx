@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import TermsSection from "../components/TermsSection";
 import TermsSkeletonCard from "../components/TermsSkeletonCard";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -13,7 +13,7 @@ const PrivacyPolicyPage = () => {
   useEffect(() => {
     const fetchPolicy = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/policy");
+        const response = await publicApi.get("/policy");
         setPolicy(response.data.policies || []);
         setLatestUpdate(response.data.latestUpdate);
       } catch (error) {

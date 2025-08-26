@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import axios from "axios";
+import { publicApi, privateApi } from "../api/axios";
 import BlogDetailSkeleton from "../components/BlogDetailSkeleton";
 import { toast } from "react-toastify";
 
@@ -15,45 +15,37 @@ export default function BlogDetail() {
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(0);
   const [newComment, setNewComment] = useState("");
-  const [userReacted, setUserReacted] = useState(false); // Track if user has reacted
-  const [userShared, setUserShared] = useState(false); // Track if user has shared
+  const [userReacted, setUserReacted] = useState(false);
+  const [userShared, setUserShared] = useState(false);
 
   useEffect(() => {
     const fetchPostBySlug = async () => {
       setLoading(true);
       setError(false);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/${slug}`
-        );
+        const response = await publicApi.get(`/posts/${slug}`);
         setPost(response.data);
 
         const postId = response.data._id;
 
         // Fetch reactions count
-        const reactionRes = await axios.get(
-          `http://localhost:5000/api/reactions/post/${postId}`
-        );
+        const reactionRes = await publicApi.get(`/reactions/post/${postId}`);
         setReactions(reactionRes.data.total);
 
         // Fetch shares count
-        const shareRes = await axios.get(
-          `http://localhost:5000/api/shares/post/${postId}`
-        );
+        const shareRes = await publicApi.get(`/shares/post/${postId}`);
         setShares(shareRes.data.total);
 
         // Fetch comments
-        const commentRes = await axios.get(
-          `http://localhost:5000/api/comments/post/${postId}`
-        );
+        const commentRes = await publicApi.get(`/comments/post/${postId}`);
         setComments(commentRes.data.comments);
         setCommentCount(commentRes.data.total);
 
         const categorySlug = response.data.category?.slug;
         // Fetch related posts
         if (categorySlug) {
-          const related = await axios.get(
-            `http://localhost:5000/api/posts/category/${categorySlug}`
+          const related = await publicApi.get(
+            `/posts/category/${categorySlug}`
           );
           setRelatedPosts(related.data.posts.filter((p) => p.slug !== slug));
         }
@@ -64,16 +56,12 @@ export default function BlogDetail() {
 
         if (token && user?.uid) {
           // Assume endpoints to check user interaction
-          const userReactionRes = await axios.get(
-            `http://localhost:5000/api/reactions/user/${user.id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          const userReactionRes = await privateApi.get(
+            `/reactions/user/${user.id}`
           );
           setUserReacted(userReactionRes.data.hasReacted);
 
-          const userShareRes = await axios.get(
-            `http://localhost:5000/api/shares/user/${user.id}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          const userShareRes = await privateApi.get(`/shares/user/${user.id}`);
           setUserShared(userShareRes.data.hasShared);
         }
       } catch (error) {
@@ -101,11 +89,7 @@ export default function BlogDetail() {
     }
 
     try {
-      await axios.post(
-        `http://localhost:5000/api/reactions`,
-        { postId: post._id, type: "like" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await privateApi.post(`/reactions`, { postId: post._id, type: "like" });
       setReactions((prev) => prev + 1);
       setUserReacted(true);
       toast.success("Đã react bài viết!");
@@ -128,11 +112,10 @@ export default function BlogDetail() {
     }
 
     try {
-      await axios.post(
-        `http://localhost:5000/api/shares`,
-        { postId: post._id, sharedTo: "profile" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await privateApi.post(`/shares`, {
+        postId: post._id,
+        sharedTo: "profile",
+      });
       setShares((prev) => prev + 1);
       setUserShared(true);
       toast.success("Đã share bài viết!");
@@ -156,11 +139,10 @@ export default function BlogDetail() {
     }
 
     try {
-      const response = await axios.post(
-        `http://localhost:5000/api/comments`,
-        { postId: post._id, content: newComment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await privateApi.post(`/comments`, {
+        postId: post._id,
+        content: newComment,
+      });
       setComments((prev) => [response.data.comment, ...prev]);
       setCommentCount((prev) => prev + 1);
       setNewComment("");

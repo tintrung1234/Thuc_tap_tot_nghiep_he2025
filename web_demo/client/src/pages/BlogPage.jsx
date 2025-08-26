@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import PostItem from "../components/PostItem";
 import PaginationControls from "../components/PaginationControls";
 import JoinSection from "../components/JoinSection";
@@ -25,17 +25,16 @@ function BlogPage() {
     const getAllPosts = async () => {
       setLoadingPosts(true);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts?page=${currentPage}&limit=${postsPerPage}`
+        const response = await publicApi.get(
+          `/posts?page=${currentPage}&limit=${postsPerPage}`
         );
         const postsData = response.data.posts || [];
 
         // Fetch counts for all posts in bulk
         const postIds = postsData.map((post) => post._id);
-        const countsResponse = await axios.post(
-          `http://localhost:5000/api/posts/counts`,
-          { postIds }
-        );
+        const countsResponse = await publicApi.post(`/posts/counts`, {
+          postIds,
+        });
         const counts = countsResponse.data;
 
         const postsWithCounts = postsData.map((post) => {
@@ -66,16 +65,13 @@ function BlogPage() {
     const getTopPost = async () => {
       setLoadingTopPost(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/posts/top`);
+        const response = await publicApi.get(`/posts/top`);
         const topPostData = response.data;
 
         if (topPostData) {
-          const countsResponse = await axios.post(
-            `http://localhost:5000/api/posts/counts`,
-            {
-              postIds: [topPostData._id],
-            }
-          );
+          const countsResponse = await publicApi.post(`/posts/counts`, {
+            postIds: [topPostData._id],
+          });
           const countData = countsResponse.data[0] || {};
 
           setTopPost({

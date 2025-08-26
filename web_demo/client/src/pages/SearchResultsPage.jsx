@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BlogPost from "../components/BlogPost";
 import TagsFilter from "../components/TagsFilter";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import { useSearchParams } from "react-router-dom";
 import BlogSkeleton from "../components/BlogSkeleton";
 import { toast } from "react-toastify";
@@ -27,15 +27,11 @@ const SearchResultsPage = () => {
       setLoading(true);
       try {
         // Fetch categories
-        const categoriesResponse = await axios.get(
-          "http://localhost:5000/api/categories"
-        );
+        const categoriesResponse = await publicApi.get("/categories");
         setCategories(categoriesResponse.data.categories);
 
         // Fetch tags
-        const tagsResponse = await axios.get(
-          "http://localhost:5000/api/tags?limit=10"
-        );
+        const tagsResponse = await publicApi.get("/tags?limit=10");
         setTags(tagsResponse.data.tags);
 
         // Fetch posts
@@ -43,18 +39,17 @@ const SearchResultsPage = () => {
         if (searchQuery) params.append("q", searchQuery);
         if (selectedCategory) params.append("category", selectedCategory);
         if (selectedTag) params.append("tags", selectedTag);
-        const postsResponse = await axios.get(
-          `http://localhost:5000/api/posts/search?${params.toString()}`
+        const postsResponse = await publicApi.get(
+          `/posts/search?${params.toString()}`
         );
         const postsData = postsResponse.data.posts || [];
 
         console.log(postsData);
         // Fetch counts for all posts in bulk
         const postIds = postsData.map((post) => post._id);
-        const countsResponse = await axios.post(
-          `http://localhost:5000/api/posts/counts`,
-          { postIds }
-        );
+        const countsResponse = await publicApi.post(`/posts/counts`, {
+          postIds,
+        });
         const counts = countsResponse.data;
 
         const postsWithCounts = postsData.map((post) => {
@@ -71,10 +66,9 @@ const SearchResultsPage = () => {
 
         // Fetch RAG search if query is a question
         if (isQuestion(searchQuery)) {
-          const ragResponse = await axios.post(
-            "http://localhost:5000/api/ask",
-            { query: searchQuery }
-          );
+          const ragResponse = await publicApi.post("/ask", {
+            query: searchQuery,
+          });
           setRagAnswer(
             ragResponse.data.answer || "Không có câu trả lời phù hợp."
           );
