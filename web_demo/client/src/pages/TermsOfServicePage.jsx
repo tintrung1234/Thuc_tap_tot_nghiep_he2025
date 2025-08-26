@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import TermsSection from "../components/TermsSection";
 import TermsSkeletonCard from "../components/TermsSkeletonCard";
 import { toast } from "react-toastify";
@@ -12,7 +12,7 @@ const TermsOfServicePage = () => {
   useEffect(() => {
     const fetchTerms = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/terms");
+        const response = await publicApi.get("/terms");
         setTerms(response.data.terms || []);
         setLatestUpdate(response.data.latestUpdate);
       } catch (error) {

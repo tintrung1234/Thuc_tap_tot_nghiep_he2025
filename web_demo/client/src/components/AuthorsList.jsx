@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 import { toast } from "react-toastify";
 // eslint-disable-next-line no-unused-vars
@@ -19,9 +19,7 @@ const AuthorsList = () => {
   useEffect(() => {
     const fetchAuthors = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5000/api/users/recent"
-        );
+        const response = await publicApi.get("/users/recent");
         setAuthors(response.data);
       } catch (error) {
         toast.error("Không thể tải danh sách tác giả. Vui lòng thử lại sau!");

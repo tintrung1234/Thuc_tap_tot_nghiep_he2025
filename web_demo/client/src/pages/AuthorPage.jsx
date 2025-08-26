@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { privateApi } from "../api/axios";
 import { toast } from "react-toastify";
 import AuthorSkeleton from "../components/AuthorSkeleton";
 import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from "react-icons/fa";
@@ -25,13 +25,12 @@ export default function AuthorPage() {
       const userData = JSON.parse(localStorage.getItem("user"));
       if (token && userData?.uid) {
         try {
-          const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/${userData.uid}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          const profileResponse = await privateApi.get(
+            `/users/${userData.uid}`
           );
           setUser(userData);
           setProfile(profileResponse.data);
-          await fetchUserPosts(userData.uid, token);
+          await fetchUserPosts(userData.uid);
         } catch (error) {
           toast.error("Không thể tải thông tin tài khoản!");
           console.error("Error fetching profile:", error);
@@ -50,12 +49,9 @@ export default function AuthorPage() {
     fetchUserData();
   }, [navigate]);
 
-  const fetchUserPosts = async (uid, token) => {
+  const fetchUserPosts = async (uid) => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/posts/user/${uid}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await privateApi.get(`/posts/user/${uid}`, {});
       setPosts(response.data.posts);
     } catch (error) {
       toast.error("Không thể tải bài viết của bạn!");

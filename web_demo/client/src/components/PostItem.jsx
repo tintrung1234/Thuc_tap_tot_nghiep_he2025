@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaHeart, FaShare, FaComment } from "react-icons/fa";
+import fallback from "../assets/fallback.jpg";
 
 const PostItem = ({ post }) => {
   const navigate = useNavigate();
@@ -19,26 +20,30 @@ const PostItem = ({ post }) => {
 
   return (
     <div
-      className="mb-8 flex bg-white shadow rounded overflow-hidden cursor-pointer"
+      className="mb-8 flex bg-white shadow rounded overflow-hidden cursor-pointer "
       data-aos="fade-up"
       onClick={() => {
         handleDetailClick(post.slug);
       }}
     >
-      <img
-        src={post.imageUrl}
-        alt={post.title}
-        className="w-1/3 h-60 object-cover "
-      />
-      <div className="p-8 w-2/3">
-        <span className="text-purple-600 tracking-widest font-semibold text-sm text-transform: uppercase">
+      {/* Left Image */}
+      <div className="w-1/3 ml-2 flex items-center justify-center">
+        <img
+          src={post.imageUrl || fallback}
+          alt={post.title}
+          className="h-60 w-full object-cover rounded-xl"
+        />
+      </div>
+
+      {/* Right Content */}
+      <div className="p-8 w-2/3 flex flex-col justify-center">
+        <span className="text-purple-600 tracking-widest font-semibold text-sm uppercase">
           {post.category.name}
         </span>
         <h3 className="text-xl font-bold mt-1 text-gray-800 hover:text-purple-700 transition-colors">
           {post.title || "Không có tiêu đề"}
         </h3>
-        <div className="text-gray-600" />
-        <div className="text-gray-600 text-sm mt-2 line-clamp-3 mb-4">
+        <div className="text-gray-600 text-sl mt-2 line-clamp-3 mb-4">
           <div
             dangerouslySetInnerHTML={{
               __html: truncateDescription(post.description || ""),

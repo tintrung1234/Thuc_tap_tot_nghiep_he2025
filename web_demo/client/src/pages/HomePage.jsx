@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import TopPostSkeleton from "../components/TopPostSkeleton";
 import BlogSkeleton from "../components/BlogSkeleton";
@@ -23,9 +23,7 @@ export default function HomePage() {
     const getRecentPosts = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/recent`
-        );
+        const response = await publicApi.get(`/posts/recent`);
         setPosts(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài biết mới nhất!");
@@ -42,9 +40,7 @@ export default function HomePage() {
     const getFeaturedPosts = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/posts/featured`
-        );
+        const response = await publicApi.get(`posts/featured`);
         setFeaturedPosts(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài nổi bật!");
@@ -61,7 +57,7 @@ export default function HomePage() {
     const getTopPost = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/posts/top`);
+        const response = await publicApi.get(`/posts/top`);
         setTopPost(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu bài biết top 1!");

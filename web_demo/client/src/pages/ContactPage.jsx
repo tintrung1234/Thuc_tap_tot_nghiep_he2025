@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { privateApi } from "../api/axios";
 import { toast } from "react-toastify";
 
 const ContactPage = () => {
@@ -24,16 +24,7 @@ const ContactPage = () => {
     }
     e.preventDefault();
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/contact",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await privateApi.post("/api/contact", formData);
       setStatus({ type: "success", message: response.data.message });
       setFormData({ fullName: "", email: "", queryRelated: "", message: "" });
       toast.success("Gửi liên hệ thành công!");

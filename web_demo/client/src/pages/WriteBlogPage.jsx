@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { publicApi, privateApi } from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import RequireAuth from "../middleware/RequireAuth";
@@ -8,6 +8,7 @@ import { generateText } from "../services/AiService";
 import ImagePostDropzone from "../components/ImagePostDropzone";
 import "../style/css/style.css";
 import Editor from "../components/Editor";
+import { categoryIcons } from "../utils/getCategoryIcon";
 
 export default function WriteBlogPage() {
   const navigate = useNavigate();
@@ -66,10 +67,8 @@ export default function WriteBlogPage() {
     const user = JSON.parse(localStorage.getItem("user"));
     if (token && user?.uid) {
       // Fetch user info
-      axios
-        .get(`http://localhost:5000/api/users/${user.uid}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      privateApi
+        .get(`/users/${user.uid}`)
         .then((response) => {
           setUserName(response.data.username);
         })
@@ -84,8 +83,8 @@ export default function WriteBlogPage() {
         });
 
       // Fetch categories
-      axios
-        .get("http://localhost:5000/api/categories")
+      publicApi
+        .get("/categories")
         .then((response) => {
           setCategories(response.data.categories);
         })
@@ -95,8 +94,8 @@ export default function WriteBlogPage() {
         });
 
       // Fetch latest 10 tags
-      axios
-        .get("http://localhost:5000/api/tags?limit=10")
+      publicApi
+        .get("/tags?limit=10")
         .then((response) => {
           setAvailableTags(response.data.tags);
         })
@@ -141,11 +140,7 @@ export default function WriteBlogPage() {
     }
     const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/tags",
-        { name: newTag },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await privateApi.post("/tags", { name: newTag });
       setAvailableTags((prev) => [...prev, response.data]);
       setTags((prev) => [...prev, response.data._id]);
       setNewTag("");
@@ -208,12 +203,7 @@ export default function WriteBlogPage() {
       tags.forEach((tagId) => formData.append("tags", tagId));
       if (imageFile) formData.append("image", imageFile);
 
-      await axios.post("http://localhost:5000/api/posts/create", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await privateApi.post("/posts/create", formData);
 
       // Clear form
       setTitle("");
@@ -282,8 +272,14 @@ export default function WriteBlogPage() {
                 <textarea
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  onInput={(e) => {
+                    e.target.style.height = "auto";
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   placeholder="Viết tiêu đề tại đây"
-                  className="mt-2 text-[26px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+                  className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 border border-gray-300 rounded-lg overflow-hidden resize-none"
+                  rows={1}
+                  required
                 />
               </div>
 
@@ -293,26 +289,31 @@ export default function WriteBlogPage() {
                   Danh mục
                 </h3>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-6 p-4">
-                  {categories.map((cat) => (
-                    <div
-                      key={cat._id}
-                      onClick={() => setCategory(cat._id)}
-                      className={`cursor-pointer flex items-center gap-3 px-4 py-2 border-2 rounded-xl transition-all ${
-                        category === cat._id
-                          ? "bg-yellow-400 border-gray-500"
-                          : "border-gray-200"
-                      }`}
-                    >
-                      <div className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100">
-                        <span className="text-sm font-medium">
-                          {cat.name[0]}
-                        </span>
+                  {categories.map((cat) => {
+                    const Icon =
+                      categoryIcons[cat.slug] || categoryIcons["default"];
+                    return (
+                      <div
+                        key={cat._id}
+                        onClick={() => setCategory(cat._id)}
+                        className={`cursor-pointer flex items-center gap-3 px-4 py-2 border-2 rounded-xl transition-all ${
+                          category === cat._id
+                            ? "bg-yellow-400 border-gray-500"
+                            : "border-gray-200"
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100">
+                          <Icon className="w-5 h-5 text-gray-700" />{" "}
+                        </div>
+
+                        {/* Tên danh mục */}
+                        <h2 className="font-medium text-base sm:text-lg">
+                          {cat.name}
+                        </h2>
                       </div>
-                      <h2 className="font-medium text-base sm:text-lg">
-                        {cat.name}
-                      </h2>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -388,7 +389,8 @@ export default function WriteBlogPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Viết nội dung tóm tắt tại đây"
-                  className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+                  className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 min-h-[200px] border border-gray-300 rounded-lg"
+                  required
                 />
               </div>
 

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FaHeart, FaShare, FaComment } from "react-icons/fa";
+import fallback from "../assets/fallback.jpg";
 
 const BlogPost = ({
   slug,
@@ -36,10 +37,7 @@ const BlogPost = ({
       {/* Image */}
       <div className="sm:w-40 sm:h-40 w-full h-48 flex-shrink-0">
         <img
-          src={
-            imageUrl ||
-            "https://res.cloudinary.com/daeorkmlh/image/upload/v1750835215/No-Image-Placeholder.svg_v0th8g.png"
-          }
+          src={imageUrl || fallback}
           alt={title}
           className="w-full h-full object-cover rounded-lg"
         />
