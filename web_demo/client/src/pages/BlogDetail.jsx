@@ -3,6 +3,15 @@ import { useParams, Link } from "react-router-dom";
 import { publicApi, privateApi } from "../api/axios";
 import BlogDetailSkeleton from "../components/BlogDetailSkeleton";
 import { toast } from "react-toastify";
+import {
+  FaHeart,
+  FaLaugh,
+  FaThumbsUp,
+  FaSadCry,
+  FaAngry,
+  FaSurprise,
+  FaComment,
+} from "react-icons/fa";
 
 export default function BlogDetail() {
   const { slug } = useParams();
@@ -10,13 +19,24 @@ export default function BlogDetail() {
   const [relatedPosts, setRelatedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [reactions, setReactions] = useState(0);
-  const [shares, setShares] = useState(0);
+  const [reactions, setReactions] = useState({ total: 0, breakdown: {} });
   const [comments, setComments] = useState([]);
   const [commentCount, setCommentCount] = useState(0);
   const [newComment, setNewComment] = useState("");
-  const [userReacted, setUserReacted] = useState(false);
-  const [userShared, setUserShared] = useState(false);
+  const [userReacted, setUserReacted] = useState({
+    hasReacted: false,
+    type: null,
+  });
+  const [showReactionDropdown, setShowReactionDropdown] = useState(false);
+
+  const reactionIcons = {
+    like: { icon: <FaThumbsUp className="text-blue-500" />, label: "Like" },
+    haha: { icon: <FaLaugh className="text-yellow-500" />, label: "Haha" },
+    love: { icon: <FaHeart className="text-red-500" />, label: "Love" },
+    wow: { icon: <FaSurprise className="text-green-500" />, label: "Wow" },
+    sad: { icon: <FaSadCry className="text-blue-700" />, label: "Sad" },
+    angry: { icon: <FaAngry className="text-orange-500" />, label: "Angry" },
+  };
 
   useEffect(() => {
     const fetchPostBySlug = async () => {
@@ -28,13 +48,9 @@ export default function BlogDetail() {
 
         const postId = response.data._id;
 
-        // Fetch reactions count
+        // Fetch reactions count with breakdown
         const reactionRes = await publicApi.get(`/reactions/post/${postId}`);
-        setReactions(reactionRes.data.total);
-
-        // Fetch shares count
-        const shareRes = await publicApi.get(`/shares/post/${postId}`);
-        setShares(shareRes.data.total);
+        setReactions(reactionRes.data);
 
         // Fetch comments
         const commentRes = await publicApi.get(`/comments/post/${postId}`);
@@ -50,19 +66,14 @@ export default function BlogDetail() {
           setRelatedPosts(related.data.posts.filter((p) => p.slug !== slug));
         }
 
-        // Check if user has reacted or shared (requires authentication)
+        // Check if user has reacted
         const token = localStorage.getItem("token");
         const user = JSON.parse(localStorage.getItem("user"));
-
-        if (token && user?.uid) {
-          // Assume endpoints to check user interaction
+        if (token && user?.id) {
           const userReactionRes = await privateApi.get(
-            `/reactions/user/${user.id}`
+            `/reactions/user/${postId}`
           );
-          setUserReacted(userReactionRes.data.hasReacted);
-
-          const userShareRes = await privateApi.get(`/shares/user/${user.id}`);
-          setUserShared(userShareRes.data.hasShared);
+          setUserReacted(userReactionRes.data);
         }
       } catch (error) {
         console.error("Error fetching post:", error);
@@ -76,52 +87,38 @@ export default function BlogDetail() {
     fetchPostBySlug();
   }, [slug]);
 
-  const handleReact = async () => {
+  const handleReact = async (type) => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Vui lòng đăng nhập để thực hiện hành động này!");
       return;
     }
 
-    if (userReacted) {
-      toast.info("Bạn đã react bài viết này!");
+    if (userReacted.hasReacted && userReacted.type === type) {
+      toast.info(`Bạn đã chọn ${reactionIcons[type].label}!`);
       return;
     }
 
     try {
-      await privateApi.post(`/reactions`, { postId: post._id, type: "like" });
-      setReactions((prev) => prev + 1);
-      setUserReacted(true);
-      toast.success("Đã react bài viết!");
+      await privateApi.post(`/reactions`, { postId: post._id, type });
+      setReactions((prev) => ({
+        total: prev.total + (userReacted.hasReacted ? 0 : 1),
+        breakdown: {
+          ...prev.breakdown,
+          [type]: (prev.breakdown[type] || 0) + 1,
+          ...(userReacted.hasReacted && userReacted.type !== type
+            ? {
+                [userReacted.type]: (prev.breakdown[userReacted.type] || 1) - 1,
+              }
+            : {}),
+        },
+      }));
+      setUserReacted({ hasReacted: true, type });
+      setShowReactionDropdown(false);
+      toast.success(`Đã react ${reactionIcons[type].label}!`);
     } catch (error) {
       toast.error("Lỗi khi react bài viết!");
       console.error("Error reacting to post:", error);
-    }
-  };
-
-  const handleShare = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Vui lòng đăng nhập để thực hiện hành động này!");
-      return;
-    }
-
-    if (userShared) {
-      toast.info("Bạn đã share bài viết này!");
-      return;
-    }
-
-    try {
-      await privateApi.post(`/shares`, {
-        postId: post._id,
-        sharedTo: "profile",
-      });
-      setShares((prev) => prev + 1);
-      setUserShared(true);
-      toast.success("Đã share bài viết!");
-    } catch (error) {
-      toast.error("Lỗi khi share bài viết!");
-      console.error("Error sharing post:", error);
     }
   };
 
@@ -143,7 +140,7 @@ export default function BlogDetail() {
         postId: post._id,
         content: newComment,
       });
-      setComments((prev) => [response.data.comment, ...prev]);
+      setComments((prev) => [response.data, ...prev]);
       setCommentCount((prev) => prev + 1);
       setNewComment("");
       toast.success("Đã thêm bình luận!");
@@ -194,7 +191,7 @@ export default function BlogDetail() {
       {/* Category */}
       {post.category && (
         <div
-          className="mt-3 inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium shadow-sm hover:scale-105 transition"
+          className="mt-3 inline-block bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold shadow-sm hover:scale-105 transition"
           data-aos="fade-left"
         >
           🎯 {post.category.name}
@@ -212,7 +209,7 @@ export default function BlogDetail() {
             <Link
               key={tagItem._id}
               to={`/tags/${tagItem.slug}`}
-              className="bg-blue-50 text-blue-500 px-2 py-1 rounded-lg text-xs hover:bg-blue-100 transition"
+              className="text-blue-500 text-sm font-medium hover:underline bg-blue-50 px-2 py-1 rounded"
               onClick={(e) => e.stopPropagation()}
             >
               #{tagItem.name}
@@ -256,34 +253,67 @@ export default function BlogDetail() {
         />
       </div>
 
-      {/* Reactions, Shares, Comments Counts */}
+      {/* Reactions and Comments Counts */}
       <div
         className="mt-6 flex items-center gap-6 text-gray-600"
         data-aos="fade-up"
       >
-        <button
-          onClick={handleReact}
-          className={`flex items-center gap-1 ${
-            userReacted ? "text-red-500" : "text-gray-600 hover:text-red-500"
-          } transition`}
+        <div
+          className="relative"
+          onMouseEnter={() => setShowReactionDropdown(true)}
+          onMouseLeave={() => setShowReactionDropdown(false)}
         >
-          ❤️ {reactions} React
-        </button>
-        <button
-          onClick={handleShare}
-          className={`flex items-center gap-1 ${
-            userShared ? "text-blue-500" : "text-gray-600 hover:text-blue-500"
-          } transition`}
-        >
-          🔗 {shares} Share
-        </button>
+          <button className="flex items-center gap-1 text-gray-600 hover:text-red-500 transition">
+            {userReacted.hasReacted ? (
+              reactionIcons[userReacted.type].icon
+            ) : (
+              <FaHeart className="text-gray-500" />
+            )}
+            <span>{reactions.total} React</span>
+          </button>
+
+          {showReactionDropdown && (
+            <div className="absolute bottom-full left-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg p-2 flex gap-2 z-10">
+              {Object.entries(reactionIcons).map(([type, { icon, label }]) => (
+                <button
+                  key={type}
+                  onClick={() => handleReact(type)}
+                  className={`p-2 rounded-full hover:bg-gray-100 transition ${
+                    userReacted.type === type ? "bg-gray-100" : ""
+                  }`}
+                  title={label}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <span className="flex items-center gap-1">
-          💬 {commentCount} Bình luận
+          <FaComment className="text-gray-500" /> {commentCount} Bình luận
         </span>
       </div>
 
+      {/* Reaction Breakdown */}
+      {reactions.total > 0 && (
+        <div
+          className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600"
+          data-aos="fade-up"
+        >
+          {Object.entries(reactions.breakdown).map(
+            ([type, count]) =>
+              count > 0 && (
+                <span key={type} className="flex items-center gap-1">
+                  {reactionIcons[type].icon} {count}
+                </span>
+              )
+          )}
+        </div>
+      )}
+
       {/* Comment Section */}
-      <div className="mt-10" data-aos="fade-up">
+      <div className="mt-8" data-aos="fade-up">
         <h3 className="text-xl font-bold text-gray-800 mb-4">Bình luận</h3>
         <form onSubmit={handleCommentSubmit} className="mb-6">
           <textarea

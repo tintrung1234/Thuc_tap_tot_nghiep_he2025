@@ -57,7 +57,6 @@ const SearchResultsPage = () => {
           return {
             ...post,
             reactions: countData.reactions || 0,
-            shares: countData.shares || 0,
             comments: countData.comments || 0,
           };
         });
@@ -140,7 +139,6 @@ const SearchResultsPage = () => {
       imageUrl: chunk.metadata.imageUrl || "",
       uid: chunk.metadata.uid || {},
       reactions: 0, // No counts for chunks
-      shares: 0,
       comments: 0,
     })),
   ];
@@ -197,7 +195,6 @@ const SearchResultsPage = () => {
                   imageUrl={post.imageUrl}
                   author={post.uid}
                   reactions={post.reactions}
-                  shares={post.shares}
                   comments={post.comments}
                 />
               ))}

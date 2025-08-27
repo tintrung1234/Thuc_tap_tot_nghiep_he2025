@@ -14,7 +14,7 @@ export const publicApi = axios.create({
 export const privateApi = axios.create({
   baseURL: API_URL,
   headers: {
-    "Content-Type": "multipart/form-data",
+    "Content-Type": "application/json",
   },
 });
 
