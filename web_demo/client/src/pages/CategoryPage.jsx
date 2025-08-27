@@ -35,7 +35,6 @@ const CategoryPage = () => {
           return {
             ...post,
             reactions: countData.reactions || 0,
-            shares: countData.shares || 0,
             comments: countData.comments || 0,
           };
         });

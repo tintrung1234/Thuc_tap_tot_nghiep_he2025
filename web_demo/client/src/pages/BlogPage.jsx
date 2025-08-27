@@ -8,7 +8,7 @@ import BlogSkeleton from "../components/BlogSkeleton";
 import TopPostSkeleton from "../components/TopPostSkeleton";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { FaHeart, FaShare, FaComment } from "react-icons/fa";
+import { FaHeart, FaComment } from "react-icons/fa";
 
 function BlogPage() {
   const [posts, setPosts] = useState([]);
@@ -42,7 +42,6 @@ function BlogPage() {
           return {
             ...post,
             reactions: countData.reactions || 0,
-            shares: countData.shares || 0,
             comments: countData.comments || 0,
           };
         });
@@ -77,7 +76,6 @@ function BlogPage() {
           setTopPost({
             ...topPostData,
             reactions: countData.reactions || 0,
-            shares: countData.shares || 0,
             comments: countData.comments || 0,
           });
         } else {
@@ -153,9 +151,6 @@ function BlogPage() {
                   <span className="flex items-center gap-1">
                     <FaHeart className="text-red-500" />{" "}
                     {topPost.reactions || 0}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <FaShare className="text-blue-500" /> {topPost.shares || 0}
                   </span>
                   <span className="flex items-center gap-1">
                     <FaComment className="text-gray-500" />{" "}
