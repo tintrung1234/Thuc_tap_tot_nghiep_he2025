@@ -1,6 +1,5 @@
 const ChromaModel = require("../models/ChromaModel");
 const OllamaModel = require("../models/OllamaModel");
-const { pipeline } = require("@xenova/transformers");
 
 class SearchService {
   constructor() {
@@ -9,6 +8,7 @@ class SearchService {
   }
 
   async _init() {
+    const { pipeline } = await import("@xenova/transformers");
     this.embedder = await pipeline(
       "feature-extraction",
       process.env.EMBED_MODEL || "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
