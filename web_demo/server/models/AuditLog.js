@@ -26,7 +26,6 @@ const auditLogSchema = new mongoose.Schema(
         "Category",
         "Comment",
         "Reaction",
-        "Share",
         "Terms",
         "Policy",
         "Notification",

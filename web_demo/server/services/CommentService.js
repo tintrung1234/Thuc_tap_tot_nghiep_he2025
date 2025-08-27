@@ -1,5 +1,6 @@
 const Comment = require("../models/Comment");
 const Post = require("../models/Post");
+const User = require("../models/User");
 const Notification = require("../models/Notification");
 const AuditLog = require("../models/AuditLog");
 
@@ -28,9 +29,12 @@ class CommentService {
     return comment;
   }
 
-  static async addComment({ postId, content, userId, username }) {
+  static async addComment({ postId, content, userId }) {
     const post = await Post.findOne({ _id: postId, isDeleted: false });
     if (!post) throw new Error("Post not found");
+
+    const user = await User.findOne({ _id: userId, isDeleted: false });
+    if (!user) throw new Error("User not found");
 
     const comment = new Comment({ postId, userId, content });
     await comment.save();
@@ -48,7 +52,7 @@ class CommentService {
         userId: post.uid,
         type: "comment",
         relatedId: postId,
-        message: `${username} commented on your post: ${post.title}`,
+        message: `${user.username} commented on your post: ${post.title}`,
       });
     }
 
