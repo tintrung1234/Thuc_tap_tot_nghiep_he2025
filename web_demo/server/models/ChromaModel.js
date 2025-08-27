@@ -4,7 +4,7 @@ class ChromaModel {
   constructor() {
     this.client = new ChromaClient({
       host: process.env.CHROMA_HOST || "localhost",
-      port: Number(process.env.CHROMA_PORT) || 8000,
+      port: Number(process.env.CHROMA_PORT) || 9000,
       ssl: process.env.CHROMA_SSL === "true",
     });
 
