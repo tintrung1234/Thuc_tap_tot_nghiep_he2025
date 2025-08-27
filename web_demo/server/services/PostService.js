@@ -5,7 +5,6 @@ const Tag = require("../models/Tag");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notification");
-const Share = require("../models/Share");
 const Comment = require("../models/Comment");
 const Reaction = require("../models/Reaction");
 const cloudinary = require("../config/cloudinary");
@@ -127,7 +126,7 @@ class PostService {
       .populate("category", "name slug")
       .populate("uid", "username")
       .populate("tags", "name slug")
-      .sort({ shares: -1 })
+      .sort({ updatedAt: -1 })
       .limit(limit)
       .select(
         "title slug content description imageUrl category tags views createdAt"
@@ -261,7 +260,7 @@ class PostService {
       .skip(skip)
       .limit(limit)
       .select(
-        "title slug content description imageUrl category tags views shares createdAt"
+        "title slug content description imageUrl category tags views createdAt"
       );
 
     const total = await Post.countDocuments({
@@ -366,11 +365,6 @@ class PostService {
     post.isDeleted = true;
     await post.save();
 
-    await Share.updateMany(
-      { postId: post._id, isDeleted: false },
-      { isDeleted: true }
-    );
-
     await AuditLog.logAction({
       userId: currentUser.uid,
       action: "soft_delete",
@@ -390,17 +384,13 @@ class PostService {
         { $match: { postId: { $in: objectIds }, isDeleted: false } },
         { $group: { _id: "$postId", count: { $sum: 1 } } },
       ]),
-      Share.aggregate([
-        { $match: { postId: { $in: objectIds }, isDeleted: false } },
-        { $group: { _id: "$postId", count: { $sum: 1 } } },
-      ]),
       Reaction.aggregate([
         { $match: { postId: { $in: objectIds }, isDeleted: false } },
         { $group: { _id: "$postId", count: { $sum: 1 } } },
       ]),
     ]);
 
-    const [commentCounts, shareCounts, reactionCounts] = counts;
+    const [commentCounts, reactionCounts] = counts;
 
     return postIds.map((postId) => {
       const objId = new mongoose.Types.ObjectId(postId);
@@ -408,7 +398,6 @@ class PostService {
       return {
         postId: postId.toString(),
         comments: commentCounts.find((c) => c._id.equals(objId))?.count || 0,
-        shares: shareCounts.find((s) => s._id.equals(objId))?.count || 0,
         reactions: reactionCounts.find((r) => r._id.equals(objId))?.count || 0,
       };
     });

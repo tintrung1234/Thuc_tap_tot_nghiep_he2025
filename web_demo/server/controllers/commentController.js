@@ -28,12 +28,11 @@ const getCommentById = async (req, res) => {
 const addComment = async (req, res) => {
   try {
     const { postId, content } = req.body;
-    const { uid, username } = req.user;
+    const { uid } = req.user;
     const comment = await CommentService.addComment({
       postId,
       content,
       userId: uid,
-      username,
     });
     res.status(201).json(comment);
   } catch (error) {
