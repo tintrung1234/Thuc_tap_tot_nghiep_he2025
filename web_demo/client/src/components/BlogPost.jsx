@@ -46,7 +46,7 @@ const BlogPost = ({
       <div className="flex-1 sm:ml-4 mt-4 sm:mt-0">
         {/* Category */}
         <span className="text-purple-600 text-sm font-semibold uppercase">
-          {category?.name || "Chưa phân loại"}
+          {category ? JSON.parse(category).name : "Chưa phân loại"}
         </span>
 
         {/* Title */}
@@ -65,7 +65,7 @@ const BlogPost = ({
 
         {/* Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {tags?.map((tagItem) => (
+          {JSON.parse(tags || "[]").map((tagItem) => (
             <Link
               key={tagItem._id}
               to={`/tags/${tagItem.slug}`}
