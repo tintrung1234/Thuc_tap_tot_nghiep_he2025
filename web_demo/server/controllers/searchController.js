@@ -2,7 +2,6 @@ const SearchService = require("../services/SearchService");
 
 class SearchController {
   async search(req, res) {
-    console.log(req)
     const { query } = req.body;
     if (!query) {
       return res.status(400).json({ error: "Query is required" });
