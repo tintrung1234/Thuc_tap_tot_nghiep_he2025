@@ -108,8 +108,8 @@ export default function BlogDetail() {
           [type]: (prev.breakdown[type] || 0) + 1,
           ...(userReacted.hasReacted && userReacted.type !== type
             ? {
-                [userReacted.type]: (prev.breakdown[userReacted.type] || 1) - 1,
-              }
+              [userReacted.type]: (prev.breakdown[userReacted.type] || 1) - 1,
+            }
             : {}),
         },
       }));
@@ -219,14 +219,15 @@ export default function BlogDetail() {
       )}
 
       {/* Ảnh minh họa */}
-      <div className="my-6 relative group" data-aos="zoom-in">
+      <div className="my-6 relative group overflow-hidden cursor-pointer rounded-lg" data-aos="zoom-in">
         <img
           src={post.imageUrl}
           alt="Blog Illustration"
-          className="w-full h-[60vh] rounded-lg object-cover shadow-md group-hover:brightness-90 transition"
+          className="w-full h-[60vh] object-cover shadow-md transform transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition"></div>
+        {/* <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition duration-500"></div> */}
       </div>
+
 
       {/* Tóm tắt */}
       <div
@@ -278,9 +279,8 @@ export default function BlogDetail() {
                 <button
                   key={type}
                   onClick={() => handleReact(type)}
-                  className={`p-2 rounded-full hover:bg-gray-100 transition ${
-                    userReacted.type === type ? "bg-gray-100" : ""
-                  }`}
+                  className={`p-2 rounded-full hover:bg-gray-100 transition ${userReacted.type === type ? "bg-gray-100" : ""
+                    }`}
                   title={label}
                 >
                   {icon}
