@@ -12,7 +12,7 @@ const MainLayout = () => {
       <ScrollToTop />
       <main className="flex-grow">
         <Outlet />
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="">
           <ChatBox />
         </div>
       </main>
