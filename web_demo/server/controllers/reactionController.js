@@ -1,4 +1,4 @@
-const reactionService = require("../services/reactionService");
+const reactionService = require("../services/ReactionService");
 
 const reactionController = {
   async getReactionCount(req, res, next) {
