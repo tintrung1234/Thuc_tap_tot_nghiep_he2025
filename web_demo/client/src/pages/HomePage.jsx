@@ -155,12 +155,20 @@ export default function HomePage() {
 
             {featuredPosts && featuredPosts.length > 0 ? (
               featuredPosts.map((post) => (
-                <div key={post._id} className="border p-4 mb-4">
-                  <img
-                    src={post.imageUrl}
-                    alt="Featured Post"
-                    className="w-full h-60 mb-4"
-                  />
+                <div
+                  key={post._id}
+                  className="border p-4 mb-4 relative group cursor-pointer rounded-lg"
+                  onClick={() => {
+                    handleDetailClick(post.slug);
+                  }}
+                >
+                  <div className="overflow-hidden mb-4">
+                    <img
+                      src={post.imageUrl}
+                      alt="Featured Post"
+                      className="w-full h-60 object-cover object-center transform transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
                   <div className="text-sm text-gray-600 mb-1">
                     By{" "}
                     <span className="text-indigo-600 font-medium">

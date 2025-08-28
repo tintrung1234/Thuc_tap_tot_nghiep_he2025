@@ -168,7 +168,7 @@ function BlogPage() {
                 <img
                   src={topPost.imageUrl}
                   alt="Featured Post"
-                  className="w-full h-[60vh] max-w-md shadow"
+                  className="w-full h-[60vh] max-w-md shadow object-cover object-center"
                 />
               </div>
             </div>
