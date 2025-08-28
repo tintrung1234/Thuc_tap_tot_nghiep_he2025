@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import PaginationControls from "../components/PaginationControls";
 
 const SearchResultsPage = () => {
-  // const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const SearchResultsPage = () => {
   const [ragAnswer, setRagAnswer] = useState("");
   const [relatedChunks, setRelatedChunks] = useState([]);
   const postsPerPage = 5;
-  // const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,57 +35,38 @@ const SearchResultsPage = () => {
         setTags(tagsResponse.data.tags);
 
         // Fetch posts
-        // Build structured query object
-        // const searchQuery = {
-        //   q: searchParams.get("q"),
-        //   category: searchParams.get("category"),
-        //   tags: searchParams.get("tag"),
-        // };
-        // console.log("query:", searchQuery)
-        // console.log("Query gửi đi:", searchQuery, typeof searchQuery);
-
-        // const postsResponse = await publicApi.post(
-        //   "/search/normal-search",
-        //   { query: searchQuery.toString() }
-        // );
         const q = searchParams.get("q") || "";
+        const dataResponse = await publicApi.post("/search", { query: q });
 
-        // console.log("query:", q);
+        const postsData = dataResponse.data.chunks || [];
 
-        const dataRespone = await publicApi.post(
-          "/search",
-          { query: q }
-        );
-
-        // console.log("Search query:", dataRespone);
-        // const dataRespone = postsResponse.data.chunks || [];
+        // Reset to first page when new search is performed
+        setCurrentPage(1);
 
         // Fetch counts for all posts in bulk
-        // const postIds = postsData.map((post) => post._id);
-        // const countsResponse = await publicApi.post(`/posts/counts`, {
-        //   postIds,
-        // });
-        // const counts = countsResponse.data;
+        const postIds = postsData.map((post) => post._id);
+        const countsResponse = Math.ceil(postIds.length);
 
-        // const postsWithCounts = postsData.map((post) => {
-        //   const countData = counts.find((c) => c.postId === post._id) || {};
-        //   return {
-        //     ...post,
-        //     reactions: countData.reactions || 0,
-        //     comments: countData.comments || 0,
-        //   };
-        // });
+        const counts = countsResponse.data || [];
 
-        // setPosts(postsWithCounts);
+        const postsWithCounts = postsData.map((post) => {
+          const countData = counts.find((c) => c.postId === post._id) || {};
+          return {
+            ...post,
+            reactions: countData.reactions || 0,
+            comments: countData.comments || 0,
+          };
+        });
+
+        setPosts(postsWithCounts);
 
         // Fetch RAG search if query is a question
-        if (isQuestion(searchQuery)) {
+        if (isQuestion(q)) {
           setRagAnswer(
-            dataRespone.data.answer || "Không có câu trả lời phù hợp."
+            dataResponse.data.answer || "Không có câu trả lời phù hợp."
           );
-          setRelatedChunks(dataRespone.data.chunks || []);
-          // console.log("Related chunks:", dataRespone);
         }
+        setRelatedChunks(dataResponse.data.chunks || []);
       } catch (error) {
         toast.error("Không thể tải dữ liệu. Vui lòng thử lại sau!");
         console.error("Error fetching data:", error);
@@ -94,7 +75,7 @@ const SearchResultsPage = () => {
       }
     };
     fetchData();
-  }, [searchQuery, selectedCategory, selectedTag]);
+  }, [searchParams]);
 
   useEffect(() => {
     const query = searchParams.get("q") || "";
@@ -103,11 +84,12 @@ const SearchResultsPage = () => {
     setSearchQuery(query);
     setSelectedCategory(category);
     setSelectedTag(tag);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [searchParams]);
 
   // Client-side filtering for posts
   useEffect(() => {
-    let filtered = relatedChunks;
+    let filtered = posts;
 
     if (searchQuery) {
       filtered = filtered.filter(
@@ -131,7 +113,7 @@ const SearchResultsPage = () => {
     }
 
     setFilteredPosts(filtered);
-  }, [relatedChunks, searchQuery, selectedCategory, selectedTag]);
+  }, [posts, searchQuery, selectedCategory, selectedTag]);
 
   // Check if query is a question
   const isQuestion = (q) => {
@@ -139,7 +121,7 @@ const SearchResultsPage = () => {
   };
 
   // Combine posts with relatedChunks from RAG
-  const combinedPosts = [
+  const combinedPostsRaw = [
     ...filteredPosts,
     ...relatedChunks.map((chunk) => ({
       _id: chunk.metadata.post_id,
@@ -151,31 +133,36 @@ const SearchResultsPage = () => {
       tags: chunk.metadata.tags || [],
       imageUrl: chunk.metadata.imageUrl || "",
       uid: chunk.metadata.uid || {},
-      reactions: 0, // No counts for chunks
+      reactions: 0,
       comments: 0,
     })),
   ];
 
-  // console.log("Combined posts:", combinedPosts);
+  // Loại bỏ bài viết trùng ID, ưu tiên giữ relatedChunks
+  const combinedPosts = Array.from(
+    new Map(combinedPostsRaw.map((post) => [post._id, post])).values()
+  );
 
-  // const indexOfLastPost = currentPage * postsPerPage;
-  // const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  // const currentPosts = combinedPosts.slice(indexOfFirstPost, indexOfLastPost);
-  // const totalPages = Math.ceil(combinedPosts.length / postsPerPage);
+  // Pagination logic
+  const totalPosts = combinedPosts.length;
+  const totalPages = Math.max(1, Math.ceil(totalPosts / postsPerPage));
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = combinedPosts.slice(indexOfFirstPost, indexOfLastPost);
 
-  // const handlePrev = () => {
-  //   if (currentPage > 1) {
-  //     setCurrentPage(currentPage - 1);
-  //   }
-  //   window.scrollTo({ top: 0, behavior: "smooth" });
-  // };
+  const handlePrev = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
-  // const handleNext = () => {
-  //   if (currentPage < totalPages) {
-  //     setCurrentPage(currentPage + 1);
-  //   }
-  //   window.scrollTo({ top: 0, behavior: "smooth" });
-  // };
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8" data-aos="fade-up">
@@ -184,7 +171,7 @@ const SearchResultsPage = () => {
       </h1>
 
       {/* Display LLM answer if query is a question */}
-      {ragAnswer && (
+      {ragAnswer !== "Không có câu trả lời phù hợp." && (
         <div className="mb-8 p-4 bg-gray-100 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-2">
             Câu trả lời thông minh:
@@ -193,13 +180,14 @@ const SearchResultsPage = () => {
         </div>
       )}
 
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="col-span-2">
           {loading ? (
             <BlogSkeleton count={postsPerPage} />
-          ) : combinedPosts.length > 0 ? (
+          ) : currentPosts.length > 0 ? (
             <>
-              {combinedPosts.map((post) => (
+              {currentPosts.map((post) => (
                 <BlogPost
                   key={post._id}
                   slug={post.slug}
@@ -213,12 +201,12 @@ const SearchResultsPage = () => {
                   comments={post.comments}
                 />
               ))}
-              {/* <PaginationControls
+              <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPrev={handlePrev}
                 onNext={handleNext}
-              /> */}
+              />
             </>
           ) : (
             <p>Không tìm thấy bài viết nào phù hợp.</p>
