@@ -10,7 +10,7 @@ import hide from "../assets/hide.png";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,14 +27,11 @@ function Register() {
     setSuccess("");
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/users/register",
-        {
-          email,
-          username,
-          password,
-        }
-      );
+      const response = await publicApi.post("/users/register", {
+        email,
+        username,
+        password,
+      });
 
       const { token, user } = response.data;
 

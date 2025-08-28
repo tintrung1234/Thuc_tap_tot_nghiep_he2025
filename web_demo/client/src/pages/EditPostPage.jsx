@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "quill/dist/quill.snow.css";
-import axios from "axios";
+import { publicApi, privateApi } from "../api/axios";
 import { toast } from "react-toastify";
 import Editor from "../components/Editor";
 import EditPostPageSkeleton from "../components/EditPostPageSkeleton";
 import ImagePostDropzone from "../components/ImagePostDropzone";
 import RequireAuth from "../middleware/RequireAuth";
+import { categoryIcons } from "../utils/getCategoryIcon";
 
 const EditPostPage = () => {
   const { slug } = useParams();
@@ -41,17 +42,11 @@ const EditPostPage = () => {
 
       try {
         // Fetch user profile
-        const profileResponse = await axios.get(
-          `http://localhost:5000/api/users/${user.uid}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const profileResponse = await privateApi.get(`/users/${user.uid}`);
         setProfile(profileResponse.data);
 
         // Fetch post details
-        const postResponse = await axios.get(
-          `http://localhost:5000/api/posts/${slug}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const postResponse = await privateApi.get(`/posts/${slug}`);
         const data = postResponse.data;
         setPost({
           title: data.title || "",
@@ -67,15 +62,11 @@ const EditPostPage = () => {
         );
 
         // Fetch categories
-        const categoriesResponse = await axios.get(
-          "http://localhost:5000/api/categories"
-        );
+        const categoriesResponse = await publicApi.get("/categories");
         setCategories(categoriesResponse.data.categories);
 
         // Fetch latest 10 tags
-        const tagsResponse = await axios.get(
-          "http://localhost:5000/api/tags?limit=10"
-        );
+        const tagsResponse = await publicApi.get("/tags?limit=10");
         setAvailableTags(tagsResponse.data.tags);
       } catch (error) {
         toast.error("Không thể tải dữ liệu!");
@@ -105,13 +96,8 @@ const EditPostPage = () => {
       toast.error("Vui lòng nhập tên tag!");
       return;
     }
-    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/tags",
-        { name: newTag },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await privateApi.post("/tags", { name: newTag });
       setAvailableTags((prev) => [...prev, response.data]);
       setPost((prevPost) => ({
         ...prevPost,
@@ -156,12 +142,7 @@ const EditPostPage = () => {
       }
       post.tags.forEach((tag) => data.append("tags", tag));
 
-      await axios.put(`http://localhost:5000/api/posts/update/${slug}`, data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await privateApi.put(`/posts/update/${slug}`, data);
 
       toast.success("Cập nhật bài viết thành công!");
       setTimeout(() => navigate(`/author`), 1000);
@@ -216,12 +197,16 @@ const EditPostPage = () => {
               <label className="font-bold text-[26px] sm:text-2xl mt-3">
                 Tiêu đề
               </label>
-              <input
-                type="text"
+              <textarea
                 value={post.title}
                 onChange={(e) => setPost({ ...post, title: e.target.value })}
-                className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
-                required
+                onInput={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                placeholder="Nhập tiêu đề bài viết"
+                className="mt-2 text-[20px] w-full border-3 border-gray-200 p-3 border border-gray-300 rounded-lg overflow-hidden resize-none"
+                rows={1}
               />
             </div>
 
@@ -231,24 +216,29 @@ const EditPostPage = () => {
                 Danh mục
               </h3>
               <div className="flex flex-wrap justify-center sm:justify-start gap-6 p-4">
-                {categories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    onClick={() => setPost({ ...post, category: cat._id })}
-                    className={`cursor-pointer flex items-center gap-3 px-4 py-2 border-2 rounded-xl transition-all ${
-                      post.category === cat._id
-                        ? "bg-yellow-400 border-gray-500"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100">
-                      <span className="text-sm font-medium">{cat.name[0]}</span>
+                {categories.map((cat) => {
+                  const Icon =
+                    categoryIcons[cat.slug] || categoryIcons["default"];
+                  return (
+                    <div
+                      key={cat._id}
+                      onClick={() => setPost({ ...post, category: cat._id })}
+                      className={`cursor-pointer flex items-center gap-3 px-4 py-2 border-2 rounded-xl transition-all ${
+                        post.category === cat._id
+                          ? "bg-yellow-400 border-gray-500"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      {/* Icon */}
+                      <div className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100">
+                        <Icon className="w-5 h-5 text-gray-700" />{" "}
+                      </div>
+                      <h2 className="font-medium text-base sm:text-lg">
+                        {cat.name}
+                      </h2>
                     </div>
-                    <h2 className="font-medium text-base sm:text-lg">
-                      {cat.name}
-                    </h2>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -332,7 +322,7 @@ const EditPostPage = () => {
                   }))
                 }
                 placeholder="Viết nội dung tóm tắt tại đây"
-                className="mt-2 text-[18px] w-full border-3 border-gray-200 p-3 h-35 border border-gray-300 rounded-lg"
+                className="mt-2 text-[18px] w-full border-3 border-gray-200 p-3 min-h-[200px] border border-gray-300 rounded-lg"
               />
             </div>
 

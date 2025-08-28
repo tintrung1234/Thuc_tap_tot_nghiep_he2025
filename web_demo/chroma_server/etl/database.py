@@ -6,13 +6,20 @@ from .text_processing import html_to_text
 from .chunking import chunk_by_sentences, TokenCounter
 from .embedding import embed_batches
 from .config import Config
+import json
 
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, collection, cfg: Config):
+def upsert_post(
+    post: dict,
+    model: SentenceTransformer,
+    counter: TokenCounter,
+    collection,
+    cfg: Config,
+):
     """Upsert một bài viết vào Chroma"""
     post_id = post.get("post_id")
     title = post.get("title", "")
@@ -23,15 +30,28 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
     if not text_clean:
         return 0
 
-    chunks = chunk_by_sentences(
-        text_clean, counter, cfg.max_tokens, cfg.overlap)
+    chunks = chunk_by_sentences(text_clean, counter, cfg.max_tokens, cfg.overlap)
     if not chunks:
         return 0
 
     all_docs, all_metas, all_ids = [], [], []
+
     for idx, (chunk_text, (cstart, cend)) in enumerate(chunks):
         h = sha256(chunk_text)
         uid = f"{post_id}:{idx}:{h[:8]}"
+
+        category = post.get("category")
+        if isinstance(category, (dict, list)):
+            category = json.dumps(category, ensure_ascii=False)
+
+        tags = post.get("tags", [])
+        if isinstance(tags, (dict, list)):
+            tags = json.dumps(tags, ensure_ascii=False)
+
+        user_info = post.get("uid")
+        if isinstance(user_info, (dict, list)):
+            user_info = json.dumps(user_info, ensure_ascii=False)
+
         meta = {
             "post_id": post_id,
             "title": title,
@@ -40,6 +60,10 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
             "char_start": cstart,
             "char_end": cend,
             "hash": h,
+            "category": category,
+            "tags": tags,
+            "imageUrl": post.get("imageUrl", ""),
+            "uid": user_info,
         }
         all_ids.append(uid)
         all_docs.append(chunk_text)
@@ -47,9 +71,6 @@ def upsert_post(post: dict, model: SentenceTransformer, counter: TokenCounter, c
 
     if all_docs:
         embeddings = embed_batches(model, all_docs, cfg.batch_size)
-
-        # Debug sample
-        import json
 
         print(
             "SAMPLE:",

@@ -1,6 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
+import { FaHeart, FaComment } from "react-icons/fa";
+import fallback from "../assets/fallback.jpg";
 
-const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
+const BlogPost = ({
+  slug,
+  category,
+  title,
+  description,
+  tags,
+  imageUrl,
+  reactions,
+  comments,
+}) => {
   const navigate = useNavigate();
 
   const handleDetailClick = () => {
@@ -25,10 +36,7 @@ const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
       {/* Image */}
       <div className="sm:w-40 sm:h-40 w-full h-48 flex-shrink-0">
         <img
-          src={
-            imageUrl ||
-            "https://res.cloudinary.com/daeorkmlh/image/upload/v1750835215/No-Image-Placeholder.svg_v0th8g.png"
-          }
+          src={imageUrl || fallback}
           alt={title}
           className="w-full h-full object-cover rounded-lg"
         />
@@ -38,7 +46,7 @@ const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
       <div className="flex-1 sm:ml-4 mt-4 sm:mt-0">
         {/* Category */}
         <span className="text-purple-600 text-sm font-semibold uppercase">
-          {category?.name || "Chưa phân loại"}
+          {category ? JSON.parse(category).name : "Chưa phân loại"}
         </span>
 
         {/* Title */}
@@ -57,7 +65,7 @@ const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
 
         {/* Tags */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {tags?.map((tagItem) => (
+          {JSON.parse(tags || "[]").map((tagItem) => (
             <Link
               key={tagItem._id}
               to={`/tags/${tagItem.slug}`}
@@ -67,6 +75,16 @@ const BlogPost = ({ slug, category, title, description, tags, imageUrl }) => {
               #{tagItem.name}
             </Link>
           ))}
+        </div>
+
+        {/* Reactions, Comments */}
+        <div className="mt-3 flex items-center gap-4 text-gray-500 text-sm">
+          <span className="flex items-center gap-1">
+            <FaHeart className="text-red-500" /> {reactions || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FaComment className="text-gray-500" /> {comments || 0}
+          </span>
         </div>
       </div>
     </div>

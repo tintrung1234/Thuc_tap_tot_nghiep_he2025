@@ -5,8 +5,8 @@ import weStarted from "../assets/why_we_started.png";
 import SectionBlock from "../components/SectionBlock";
 import JoinSection from "../components/JoinSection";
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
+import { publicApi } from "../api/axios";
 
 const AnimatedCounter = ({ value }) => {
   const [count, setCount] = useState(0);
@@ -46,7 +46,7 @@ export default function AboutUsPage() {
   useEffect(() => {
     const getStats = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/stats`);
+        const response = await publicApi.get(`/stats`);
         setStats(response.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu thống kê!");

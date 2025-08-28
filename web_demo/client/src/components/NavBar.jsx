@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaSearch, FaBars, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 
 const NavBar = () => {
   const [showInput, setShowInput] = useState(false);
@@ -49,9 +49,7 @@ const NavBar = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/categories?page=1&limit=10"
-        );
+        const res = await publicApi.get("/categories?page=1&limit=10");
         setCategories(res.data.categories || []);
       } catch (err) {
         console.error("Lỗi khi lấy danh mục:", err);

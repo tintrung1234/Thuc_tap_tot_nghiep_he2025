@@ -12,4 +12,5 @@ def embed_batches(
         batch = texts[i : i + batch_size]
         v = model.encode(batch, convert_to_numpy=True, normalize_embeddings=True)
         embs.extend(list(v))  # Trả về list[np.ndarray]
+
     return embs

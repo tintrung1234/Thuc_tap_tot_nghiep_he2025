@@ -3,8 +3,8 @@ const { Ollama } = require("@langchain/ollama");
 class OllamaModel {
   constructor() {
     this.llm = new Ollama({
-      baseUrl: "http://localhost:11434",
-      model: "mistral", // Hoặc 'llama2'
+      baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+      model: process.env.OLLAMA_MODEL || "llama3",
     });
   }
 

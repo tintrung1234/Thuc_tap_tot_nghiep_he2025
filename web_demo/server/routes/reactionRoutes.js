@@ -3,14 +3,8 @@ const router = express.Router();
 const reactionController = require("../controllers/reactionController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
-router.get("/post/:postId", reactionController.getReactionsByPost);
-router.get(
-  "/user/:userId",
-  authMiddleware,
-  reactionController.getUserReactionForPost
-);
+router.get("/post/:postId", reactionController.getReactionCount);
+router.get("/user/:postId", authMiddleware, reactionController.getUserReaction);
 router.post("/", authMiddleware, reactionController.addReaction);
-router.delete("/:id", authMiddleware, reactionController.deleteReaction);
-router.get("/post/:postId/stats", reactionController.getReactionStats);
 
 module.exports = router;

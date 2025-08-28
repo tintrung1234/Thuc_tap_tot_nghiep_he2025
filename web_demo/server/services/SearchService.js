@@ -1,16 +1,18 @@
-const { pipeline } = require("@xenova/transformers");
 const ChromaModel = require("../models/ChromaModel");
 const OllamaModel = require("../models/OllamaModel");
 
 class SearchService {
   constructor() {
     this.embedder = null;
-    (async () => {
-      this.embedder = await pipeline(
-        "feature-extraction",
-        "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
-      );
-    })();
+    this._init();
+  }
+
+  async _init() {
+    const { pipeline } = await import("@xenova/transformers");
+    this.embedder = await pipeline(
+      "feature-extraction",
+      process.env.EMBED_MODEL || "Xenova/paraphrase-multilingual-MiniLM-L12-v2"
+    );
   }
 
   async search(query) {
@@ -30,9 +32,16 @@ class SearchService {
 
     // Prompt cho RAG
     const context = results.documents[0]
-      .map((doc, index) => `Chunk ${index + 1}: ${doc}`)
+      .map((doc, index) => `Nội dung bài viết ${index + 1}: ${doc}`)
       .join("\n");
-    const prompt = `Dựa trên nội dung sau bằng tiếng Việt: ${context}\nTrả lời câu hỏi: ${query}`;
+
+    const prompt = `Bạn là trợ lý AI cho một blog. Hãy trả lời CHÍNH XÁC dựa trên ngữ cảnh.
+                Nếu không có thông tin trong ngữ cảnh, hãy trả lời: "Tôi không biết từ nội dung blog."
+                ---------------- NGỮ CẢNH ----------------
+                ${context}
+                -----------------------------------------
+                Câu hỏi: ${query}
+                Yêu cầu: trả lời ngắn gọn, bằng tiếng Việt, có trích dẫn nguồn (slug/tiêu đề nếu có).`;
 
     // Generation từ LLM
     const answer = await OllamaModel.generate(prompt);
@@ -42,7 +51,7 @@ class SearchService {
         content: doc,
         metadata: results.metadatas[0][index],
       })),
-      answer: answer.text || answer, // Điều chỉnh tùy LLM response
+      answer: answer.text || answer,
     };
   }
 }

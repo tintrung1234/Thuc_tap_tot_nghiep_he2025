@@ -7,11 +7,10 @@ import ic_ig from "../assets/ic_ig.png";
 import ic_x from "../assets/ic_x.png";
 import view from "../assets/view.png";
 import hide from "../assets/hide.png";
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,13 +26,10 @@ function Login() {
     setSuccess("");
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/users/login",
-        {
-          email,
-          password,
-        }
-      );
+      const response = await publicApi.post("/users/login", {
+        email,
+        password,
+      });
 
       const { token, user } = response.data;
 

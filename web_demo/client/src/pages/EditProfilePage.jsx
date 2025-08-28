@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { privateApi } from "../api/axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import AvatarDropzone from "../components/AvatarDropzone";
@@ -45,9 +45,8 @@ export default function EditProfilePage() {
       const userData = JSON.parse(localStorage.getItem("user"));
       if (token && userData?.uid) {
         try {
-          const profileResponse = await axios.get(
-            `http://localhost:5000/api/users/${userData.uid}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          const profileResponse = await privateApi.get(
+            `/users/${userData.uid}`
           );
           setProfile(profileResponse.data);
           setEditedProfile({
@@ -98,16 +97,7 @@ export default function EditProfilePage() {
         formData.append("removeAvatar", "true");
       }
 
-      const response = await axios.put(
-        `http://localhost:5000/api/users/${userData.uid}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await privateApi.put(`/users/${userData.uid}`, formData);
 
       let passwordSuccess = true;
       if (showChangePassword) {
@@ -171,11 +161,10 @@ export default function EditProfilePage() {
     }
 
     try {
-      await axios.post(
-        `http://localhost:5000/api/users/change-password`,
-        { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await privateApi.post(`/users/change-password`, {
+        currentPassword,
+        newPassword,
+      });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");

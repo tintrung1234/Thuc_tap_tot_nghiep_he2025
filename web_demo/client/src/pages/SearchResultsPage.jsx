@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import BlogPost from "../components/BlogPost";
 import TagsFilter from "../components/TagsFilter";
-import axios from "axios";
+import { publicApi } from "../api/axios";
 import { useSearchParams } from "react-router-dom";
 import BlogSkeleton from "../components/BlogSkeleton";
 import { toast } from "react-toastify";
 import PaginationControls from "../components/PaginationControls";
 
 const SearchResultsPage = () => {
-  const [posts, setPosts] = useState([]);
+  // const [posts, setPosts] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -17,49 +17,74 @@ const SearchResultsPage = () => {
   const [selectedTag, setSelectedTag] = useState("");
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
-  const [ragAnswer, setRagAnswer] = useState(""); // State cho câu trả lời từ LLM
-  const [relatedChunks, setRelatedChunks] = useState([]); // State cho các chunk từ Chroma
+  const [ragAnswer, setRagAnswer] = useState("");
+  const [relatedChunks, setRelatedChunks] = useState([]);
   const postsPerPage = 5;
-  const [currentPage, setCurrentPage] = useState(1);
+  // const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch categories
-        const categoriesResponse = await axios.get(
-          "http://localhost:5000/api/categories"
-        );
+        const categoriesResponse = await publicApi.get("/categories");
         setCategories(categoriesResponse.data.categories);
 
         // Fetch tags
-        const tagsResponse = await axios.get(
-          "http://localhost:5000/api/tags?limit=10"
-        );
+        const tagsResponse = await publicApi.get("/tags?limit=10");
         setTags(tagsResponse.data.tags);
 
-        // Fetch posts với tìm kiếm cơ bản
-        const params = new URLSearchParams();
-        if (searchQuery) params.append("q", searchQuery);
-        if (selectedCategory) params.append("category", selectedCategory);
-        if (selectedTag) params.append("tags", selectedTag);
-        const postsResponse = await axios.get(
-          `http://localhost:5000/api/posts/search?${params.toString()}`
-        );
-        setPosts(postsResponse.data);
+        // Fetch posts
+        // Build structured query object
+        // const searchQuery = {
+        //   q: searchParams.get("q"),
+        //   category: searchParams.get("category"),
+        //   tags: searchParams.get("tag"),
+        // };
+        // console.log("query:", searchQuery)
+        // console.log("Query gửi đi:", searchQuery, typeof searchQuery);
 
-        // Tích hợp tìm kiếm thông minh với RAG nếu query có vẻ là câu hỏi
+        // const postsResponse = await publicApi.post(
+        //   "/search/normal-search",
+        //   { query: searchQuery.toString() }
+        // );
+        const q = searchParams.get("q") || "";
+
+        // console.log("query:", q);
+
+        const dataRespone = await publicApi.post(
+          "/search",
+          { query: q }
+        );
+
+        // console.log("Search query:", dataRespone);
+        // const dataRespone = postsResponse.data.chunks || [];
+
+        // Fetch counts for all posts in bulk
+        // const postIds = postsData.map((post) => post._id);
+        // const countsResponse = await publicApi.post(`/posts/counts`, {
+        //   postIds,
+        // });
+        // const counts = countsResponse.data;
+
+        // const postsWithCounts = postsData.map((post) => {
+        //   const countData = counts.find((c) => c.postId === post._id) || {};
+        //   return {
+        //     ...post,
+        //     reactions: countData.reactions || 0,
+        //     comments: countData.comments || 0,
+        //   };
+        // });
+
+        // setPosts(postsWithCounts);
+
+        // Fetch RAG search if query is a question
         if (isQuestion(searchQuery)) {
-          const ragResponse = await axios.post(
-            "http://localhost:5000/api/search",
-            {
-              query: searchQuery,
-            }
-          );
           setRagAnswer(
-            ragResponse.data.answer || "Không có câu trả lời phù hợp."
+            dataRespone.data.answer || "Không có câu trả lời phù hợp."
           );
-          setRelatedChunks(ragResponse.data.chunks || []);
+          setRelatedChunks(dataRespone.data.chunks || []);
+          // console.log("Related chunks:", dataRespone);
         }
       } catch (error) {
         toast.error("Không thể tải dữ liệu. Vui lòng thử lại sau!");
@@ -80,16 +105,16 @@ const SearchResultsPage = () => {
     setSelectedTag(tag);
   }, [searchParams]);
 
-  // Client-side filtering cho posts cơ bản
+  // Client-side filtering for posts
   useEffect(() => {
-    let filtered = posts;
+    let filtered = relatedChunks;
 
     if (searchQuery) {
       filtered = filtered.filter(
         (post) =>
-          post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          post.content.toLowerCase().includes(searchQuery.toLowerCase())
+          post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          post.content?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -106,47 +131,51 @@ const SearchResultsPage = () => {
     }
 
     setFilteredPosts(filtered);
-  }, [posts, searchQuery, selectedCategory, selectedTag]);
+  }, [relatedChunks, searchQuery, selectedCategory, selectedTag]);
 
-  // Kiểm tra nếu query là câu hỏi (ví dụ đơn giản: kết thúc bằng "?" hoặc dài > 5 từ)
+  // Check if query is a question
   const isQuestion = (q) => {
-    return q.trim().endsWith("?") || q.trim().split(" ").length > 5;
+    return q.trim().endsWith("?") || q.trim().split(" ").length > 3;
   };
 
-  // Ghép posts cơ bản với relatedChunks từ Chroma (nếu có)
+  // Combine posts with relatedChunks from RAG
   const combinedPosts = [
     ...filteredPosts,
     ...relatedChunks.map((chunk) => ({
       _id: chunk.metadata.post_id,
       title: chunk.metadata.title,
-      slug: chunk.metadata.url.split("/").pop(), // Extract slug from url
-      description: chunk.content.substring(0, 200) + "...", // Use chunk content as description
+      slug: chunk.metadata.url.split("/").pop(),
+      description: chunk.content.substring(0, 200) + "...",
       content: chunk.content,
-      category: {}, // Mock if needed
-      tags: [], // Mock if needed
-      imageUrl: "", // Mock
-      uid: {}, // Mock
+      category: chunk.metadata.category || {},
+      tags: chunk.metadata.tags || [],
+      imageUrl: chunk.metadata.imageUrl || "",
+      uid: chunk.metadata.uid || {},
+      reactions: 0, // No counts for chunks
+      comments: 0,
     })),
   ];
 
-  const indexOfLastPost = currentPage * postsPerPage;
-  const indexOfFirstPost = indexOfLastPost - postsPerPage;
-  const currentPosts = combinedPosts.slice(indexOfFirstPost, indexOfLastPost);
-  const totalPages = Math.ceil(combinedPosts.length / postsPerPage);
+  // console.log("Combined posts:", combinedPosts);
 
-  const handlePrev = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // const indexOfLastPost = currentPage * postsPerPage;
+  // const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  // const currentPosts = combinedPosts.slice(indexOfFirstPost, indexOfLastPost);
+  // const totalPages = Math.ceil(combinedPosts.length / postsPerPage);
 
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // const handlePrev = () => {
+  //   if (currentPage > 1) {
+  //     setCurrentPage(currentPage - 1);
+  //   }
+  //   window.scrollTo({ top: 0, behavior: "smooth" });
+  // };
+
+  // const handleNext = () => {
+  //   if (currentPage < totalPages) {
+  //     setCurrentPage(currentPage + 1);
+  //   }
+  //   window.scrollTo({ top: 0, behavior: "smooth" });
+  // };
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8" data-aos="fade-up">
@@ -154,7 +183,7 @@ const SearchResultsPage = () => {
         Kết quả tìm kiếm cho "{searchQuery || "Tất cả"}"
       </h1>
 
-      {/* Hiển thị câu trả lời từ LLM nếu query là câu hỏi */}
+      {/* Display LLM answer if query is a question */}
       {ragAnswer && (
         <div className="mb-8 p-4 bg-gray-100 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-2">
@@ -168,9 +197,9 @@ const SearchResultsPage = () => {
         <div className="col-span-2">
           {loading ? (
             <BlogSkeleton count={postsPerPage} />
-          ) : currentPosts.length > 0 ? (
+          ) : combinedPosts.length > 0 ? (
             <>
-              {currentPosts.map((post) => (
+              {combinedPosts.map((post) => (
                 <BlogPost
                   key={post._id}
                   slug={post.slug}
@@ -180,14 +209,16 @@ const SearchResultsPage = () => {
                   tags={post.tags || []}
                   imageUrl={post.imageUrl}
                   author={post.uid}
+                  reactions={post.reactions}
+                  comments={post.comments}
                 />
               ))}
-              <PaginationControls
+              {/* <PaginationControls
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPrev={handlePrev}
                 onNext={handleNext}
-              />
+              /> */}
             </>
           ) : (
             <p>Không tìm thấy bài viết nào phù hợp.</p>

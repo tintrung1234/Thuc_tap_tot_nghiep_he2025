@@ -1,7 +1,4 @@
 const UserService = require("../services/UserService");
-const multer = require("multer");
-
-const upload = multer({ dest: "uploads/" });
 
 const register = async (req, res) => {
   try {
