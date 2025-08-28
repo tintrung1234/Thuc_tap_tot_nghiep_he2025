@@ -20,6 +20,8 @@ This project builds an **intelligent blog search system** for Vietnamese content
 
 ### Backend 📟
 
+## URL Backend: https://thuc-tap-tot-nghiep-he2025.onrender.com/api
+
 - **Node.js**: JavaScript runtime for server-side logic.
 - **Express**: Web framework for RESTful APIs.
 - **Mongoose**: ODM for MongoDB to manage data models.
@@ -295,4 +297,5 @@ VITE_API_URL=
 ## 📜 License
 
 MIT License © 2025
+
 
