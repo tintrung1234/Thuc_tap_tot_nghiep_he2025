@@ -15,10 +15,15 @@ class SearchService {
     );
   }
 
+
   async search(query) {
     if (!this.embedder) {
       throw new Error("Embedder not initialized");
     }
+
+    const isQuestion = (q) => {
+      return q.trim().endsWith("?") && q.trim().split(" ").length > 3;
+    };
 
     // Embed query
     const embedding = await this.embedder(query, {
@@ -28,14 +33,18 @@ class SearchService {
     const queryEmbedding = Array.from(embedding.data);
 
     // Retrieval từ Chroma
-    const results = await ChromaModel.query(queryEmbedding, 3);
+    const results = await ChromaModel.query(queryEmbedding, 20);
 
-    // Prompt cho RAG
-    const context = results.documents[0]
-      .map((doc, index) => `Nội dung bài viết ${index + 1}: ${doc}`)
-      .join("\n");
+    let answer = "";
 
-    const prompt = `Bạn là trợ lý AI cho một blog. Hãy trả lời CHÍNH XÁC dựa trên ngữ cảnh.
+    if (isQuestion(query)) {
+
+      // Prompt cho RAG
+      const context = results.documents[0]
+        .map((doc, index) => `Nội dung bài viết ${index + 1}: ${doc}`)
+        .join("\n");
+
+      const prompt = `Bạn là trợ lý AI cho một blog. Hãy trả lời CHÍNH XÁC dựa trên ngữ cảnh.
                 Nếu không có thông tin trong ngữ cảnh, hãy trả lời: "Tôi không biết từ nội dung blog."
                 ---------------- NGỮ CẢNH ----------------
                 ${context}
@@ -43,8 +52,9 @@ class SearchService {
                 Câu hỏi: ${query}
                 Yêu cầu: trả lời ngắn gọn, bằng tiếng Việt, có trích dẫn nguồn (slug/tiêu đề nếu có).`;
 
-    // Generation từ LLM
-    const answer = await OllamaModel.generate(prompt);
+      // Generation từ LLM
+      answer = await OllamaModel.generate(prompt);
+    }
 
     return {
       chunks: results.documents[0].map((doc, index) => ({
