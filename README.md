@@ -6,7 +6,7 @@ This project builds an **intelligent blog search system** for Vietnamese content
 
 ### Frontend ⚛️
 
-## URL Frontend: https://thuc-tap-tot-nghiep-he2025.vercel.app/
+## URL Frontend: https://vfriends.vercel.app
 
 - **React**: JavaScript library for building user interfaces.
 - **Vite**: Next-generation build tool for fast development and bundling.
@@ -20,7 +20,7 @@ This project builds an **intelligent blog search system** for Vietnamese content
 
 ### Backend 📟
 
-## URL Backend: https://thuc-tap-tot-nghiep-he2025.onrender.com/api
+## URL Backend: https://thuc-tap-tot-nghiep-he2025.onrender.com
 
 - **Node.js**: JavaScript runtime for server-side logic.
 - **Express**: Web framework for RESTful APIs.
@@ -297,5 +297,6 @@ VITE_API_URL=
 ## 📜 License
 
 MIT License © 2025
+
 
 
