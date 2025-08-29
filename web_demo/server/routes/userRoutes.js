@@ -22,5 +22,5 @@ router.put(
 );
 router.post("/change-password", authMiddleware, userController.changePassword);
 router.delete("/:uid", authMiddleware, userController.softDeleteUser);
-
+router.put("/update/:uid", authMiddleware, userController.updateUserByAdmin);
 module.exports = router;

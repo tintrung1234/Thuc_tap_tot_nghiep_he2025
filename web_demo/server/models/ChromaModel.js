@@ -9,7 +9,11 @@ class ChromaModel {
 
     const url = `${ssl ? "https" : "http"}://${host}:${port}`;
 
-    this.client = new ChromaClient({ path: url });
+    this.client = new ChromaClient({
+      host,
+      port,
+      ssl,
+    });
     console.log("Chroma client initialized with path:", url);
 
     this.collectionName = "blog_vi";
