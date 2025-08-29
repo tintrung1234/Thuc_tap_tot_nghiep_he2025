@@ -184,16 +184,16 @@ class UserService {
       .select("uid username email photoUrl createdAt");
   }
 
-  static async getAllUsers({ role, currentUser }) {
+  static async getAllUsers({ currentUser, page = 1, limit = 10 }) {
     if (currentUser.role !== "Admin") {
       throw new Error("Unauthorized");
     }
-    const query = { isDeleted: false };
-    if (role) query.role = role;
-
-    return await User.find(query)
-      .sort({ createdAt: -1 })
-      .select("uid username email role createdAt");
+    const users = await User.find({ isDeleted: false }).sort({ createdAt: -1 });
+    const total = await User.countDocuments({
+      isActive: true,
+      isDeleted: false,
+    });
+    return { users, total, page, limit };
   }
 
   static async softDeleteUser({ uid, currentUser }) {
@@ -217,6 +217,41 @@ class UserService {
     });
 
     return { message: "User soft deleted" };
+  }
+
+  static async updateUserByAdmin(uid, updates) {
+    const user = await User.findOneAndUpdate(
+      { uid, isDeleted: false },
+      {
+        $set: {
+          username: updates.username,
+          email: updates.email,
+          photoUrl: updates.photoUrl || "",
+          bio: updates.bio || "",
+          role: updates.role,
+          isActive: updates.isActive,
+          isDeleted: updates.isDeleted,
+          social: {
+            facebook: updates.social?.facebook || "",
+            twitter: updates.social?.twitter || "",
+            instagram: updates.social?.instagram || "",
+            linkedin: updates.social?.linkedin || "",
+          },
+          updatedAt: new Date(),
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    await AuditLog.logAction({
+      userId: user.uid,
+      action: "update_user_by_admin",
+      resource: "User",
+      resourceId: user._id,
+      details: `Updated user: ${user.username}`,
+    });
+
+    return { message: "User updated successfully!", user };
   }
 
   static async restoreUser({ uid, currentUser }) {

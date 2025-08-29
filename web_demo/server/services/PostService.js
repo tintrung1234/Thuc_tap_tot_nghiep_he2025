@@ -16,14 +16,11 @@ class PostService {
     const skip = (page - 1) * limit;
     const posts = await Post.find({ status: "published", isDeleted: false })
       .populate("category", "name slug")
-      .populate("uid", "username")
+      .populate("uid", "_id username")
       .populate("tags", "name slug")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .select(
-        "title slug content description imageUrl category tags views createdAt status isDeleted"
-      );
+      .limit(limit);
     const total = await Post.countDocuments({
       status: "published",
       isDeleted: false,

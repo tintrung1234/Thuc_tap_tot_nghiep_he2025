@@ -3,7 +3,7 @@ import React from "react";
 const AdminSidebar = ({ isSidebarOpen, toggleSidebar }) => {
   return (
     <div
-      className={`fixed md:static inset-y-0 left-0 w-64 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out ${
+      className={`fixed md:static inset-y-0 left-0 w-auto bg-gray-800 text-white transform transition-transform duration-300 ease-in-out ${
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       } md:translate-x-0 z-50 h-full overflow-y-auto`}
     >

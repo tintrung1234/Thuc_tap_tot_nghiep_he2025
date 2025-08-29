@@ -2,15 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import UserTable from "../components/UserTable";
 import CreateUserModal from "../components/CreateUserModal";
 import EditUserModal from "../components/EditUserModal";
-import axios from "axios";
+import { privateApi, publicApi } from "../../api/axios";
 import { toast } from "react-toastify";
-import RequireAuthAdmin from "../../middleware/RequireAuthAdmin";
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState({ users: true, posts: true });
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -18,72 +16,71 @@ function UserManagement() {
   const [selectedRole, setSelectedRole] = useState("");
   const [sortKey, setSortKey] = useState("postCount");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  // Fetch users from API
+  // Fetch users and posts concurrently
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error("Vui lòng đăng nhập để truy cập!");
+        setLoading({ users: false, posts: false });
         return;
       }
 
       try {
-        const res = await axios.get("http://localhost:3000/api/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const formattedUsers = res.data.map((user) => ({
-          uid: user.uid,
-          name: user.username,
-          email: user.email,
-          role: user.role,
-          registered: new Date(user.createdAt).toISOString().split("T")[0],
-        }));
-        setUsers(formattedUsers);
-      } catch (error) {
-        console.error("Lỗi khi lấy user từ MongoDB:", error);
-        toast.error("Không thể tải danh sách người dùng!");
-        if (error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          window.location.href = "/login";
-        }
-      }
-    };
+        const [usersRes, postsRes] = await Promise.all([
+          privateApi.get("/users"),
+          publicApi.get("/posts"),
+        ]);
 
-    fetchUsers();
-  }, []);
-
-  // Fetch posts from API to support getPostCount
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Vui lòng đăng nhập để truy cập!");
-        return;
-      }
-
-      try {
-        const res = await axios.get("http://localhost:3000/api/posts", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const formattedPosts = res.data.map((post) => ({
+        const formattedPosts = postsRes.data.posts.map((post) => ({
           id: post._id,
           title: post.title,
           authorId: post.uid,
           date: new Date(post.createdAt).toISOString().split("T")[0],
           tags: post.tags || [],
           content: post.description,
-          likes: post.likes || 0,
+          views: post.views || 0,
         }));
         setPosts(formattedPosts);
+        setLoading((prev) => ({ ...prev, posts: false }));
+
+        const formattedUsers = usersRes.data.users.map((user) => ({
+          uid: user.uid,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          registered: new Date(user.createdAt).toISOString().split("T")[0],
+          photoUrl: user.photoUrl,
+          bio: user.bio,
+          isActive: user.isActive,
+          isDeleted: user.isDeleted,
+          social: user.social,
+          postCount: formattedPosts.filter((p) => p.authorId._id === user._id)
+            .length,
+        }));
+        setUsers(formattedUsers);
+        setLoading((prev) => ({ ...prev, users: false }));
       } catch (error) {
-        console.error("Lỗi khi lấy bài viết từ MongoDB:", error);
-        toast.error("Không thể tải danh sách bài viết!");
+        console.error("Lỗi khi lấy dữ liệu:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn! Vui lòng đăng nhập lại.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+        } else {
+          toast.error(
+            error.response?.data?.error ||
+              "Không thể tải dữ liệu người dùng hoặc bài viết!"
+          );
+        }
+        setLoading({ users: false, posts: false });
       }
     };
 
-    fetchPosts();
+    fetchData();
   }, []);
 
   const handleCreateUser = async (e) => {
@@ -102,30 +99,29 @@ function UserManagement() {
 
     try {
       const newUser = { email, username, password, role };
-      await axios.post("http://localhost:3000/api/users/register", newUser, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await privateApi.post("/users/register", newUser);
+      toast.success(response.data.message || "Tạo người dùng thành công!");
 
-      toast.success("Tạo user thành công!");
+      const res = await privateApi.get("/users");
+      const formattedUsers = res.data.users.map((user) => ({
+        uid: user.uid,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        registered: new Date(user.createdAt).toISOString().split("T")[0],
+        photoUrl: user.photoUrl,
+        bio: user.bio,
+        isActive: user.isActive,
+        isDeleted: user.isDeleted,
+        social: user.social,
+        postCount: posts.filter((p) => p.authorId === user.uid).length,
+      }));
+      setUsers(formattedUsers);
       setShowCreateUserModal(false);
       e.target.reset();
-      const res = await axios.get("http://localhost:3000/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers(
-        res.data.map((user) => ({
-          uid: user.uid,
-          name: user.username,
-          email: user.email,
-          role: user.role,
-          registered: new Date(user.createdAt).toISOString().split("T")[0],
-        }))
-      );
     } catch (error) {
-      console.error("Lỗi khi tạo user:", error);
-      toast.error(
-        error?.response?.data?.error || "Có lỗi xảy ra khi tạo user!"
-      );
+      console.error("Lỗi khi tạo người dùng:", error);
+      toast.error(error.response?.data?.error || "Tạo người dùng thất bại!");
     }
   };
 
@@ -133,9 +129,19 @@ function UserManagement() {
     e.preventDefault();
     const formData = new FormData(e.target);
     const updatedUser = {
-      username: formData.get("name"),
+      username: formData.get("username"),
       email: formData.get("email"),
+      photoUrl: formData.get("photoUrl"),
+      bio: formData.get("bio"),
       role: formData.get("role"),
+      isActive: formData.get("isActive") === "true",
+      isDeleted: formData.get("isDeleted") === "true",
+      social: {
+        facebook: formData.get("social[facebook]"),
+        twitter: formData.get("social[twitter]"),
+        instagram: formData.get("social[instagram]"),
+        linkedin: formData.get("social[linkedin]"),
+      },
     };
 
     const token = localStorage.getItem("token");
@@ -145,35 +151,35 @@ function UserManagement() {
     }
 
     try {
-      await axios.put(
-        `http://localhost:3000/api/users/update/${currentUser.uid}`,
-        updatedUser,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await privateApi.put(
+        `/users/update/${currentUser.uid}`,
+        updatedUser
       );
+      toast.success(response.data.message || "Cập nhật người dùng thành công!");
 
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user.uid === currentUser.uid ? { ...user, ...updatedUser } : user
+          user.uid === currentUser.uid
+            ? { ...user, ...updatedUser, updatedAt: new Date() }
+            : user
         )
       );
-
       setShowEditUserModal(false);
-      toast.success("Cập nhật người dùng thành công!");
     } catch (error) {
       console.error("Lỗi khi cập nhật người dùng:", error);
-      toast.error("Không thể cập nhật người dùng!");
+      toast.error(
+        error.response?.data?.error || "Cập nhật người dùng thất bại!"
+      );
     }
   };
 
   const handleDeleteUser = async (uid) => {
     if (!uid) {
-      alert("ID user không tồn tại.");
+      toast.error("ID người dùng không tồn tại!");
       return;
     }
 
-    if (!window.confirm("Bạn có chắc chắn muốn xóa user này?")) {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa người dùng này?")) {
       return;
     }
 
@@ -184,14 +190,12 @@ function UserManagement() {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/users/delete/${uid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await privateApi.delete(`/users/${uid}`);
+      toast.success(response.data.message || "Xóa người dùng thành công!");
       setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
-      toast.success("Xóa user thành công");
     } catch (error) {
-      console.error("Lỗi khi xóa user:", error);
-      toast.error(error?.response?.data?.error || "Xóa user thất bại!");
+      console.error("Lỗi khi xóa người dùng:", error);
+      toast.error(error.response?.data?.error || "Xóa người dùng thất bại!");
     }
   };
 
@@ -213,48 +217,62 @@ function UserManagement() {
     return users
       .filter((user) => {
         const matchesSearch = searchTerm
-          ? user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ? user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.email.toLowerCase().includes(searchTerm.toLowerCase())
           : true;
         const matchesRole = selectedRole ? user.role === selectedRole : true;
-        return matchesSearch && matchesRole;
+        const matchesDate =
+          startDate && endDate
+            ? new Date(user.registered) >= new Date(startDate) &&
+              new Date(user.registered) <= new Date(endDate)
+            : true;
+        return matchesSearch && matchesRole && matchesDate;
       })
       .sort((a, b) => {
-        const aPostCount = posts.filter((p) => p.authorId === a.uid).length;
-        const bPostCount = posts.filter((p) => p.authorId === b.uid).length;
         const order = sortOrder === "asc" ? 1 : -1;
-        return sortKey === "postCount"
-          ? order * (aPostCount - bPostCount)
-          : order * a.name.localeCompare(b.name);
+        if (sortKey === "postCount") {
+          return order * (a.postCount - b.postCount);
+        }
+        return order * a.username.localeCompare(b.username);
       });
-  }, [users, posts, searchTerm, selectedRole, sortKey, sortOrder]);
+  }, [users, searchTerm, selectedRole, startDate, endDate, sortKey, sortOrder]);
 
-  const uniqueRoles = [...new Set(users.map((user) => user.role))].sort();
+  const uniqueRoles = useMemo(
+    () => [...new Set(users.map((user) => user.role))].sort(),
+    [users]
+  );
 
   const getPostCount = (userId) =>
-    posts.filter((p) => p.authorId === userId).length;
+    users.find((u) => u.uid === userId)?.postCount || 0;
 
   return (
-    <div className="flex-col flex flex-1 overflow-x-auto min-h-screen bg-gray-100 p-4">
+    <div className="flex flex-col flex-1 overflow-x-auto min-h-screen bg-gray-100 p-4">
       <main className="bg-white rounded-lg shadow-md p-6">
-        <UserTable
-          users={users}
-          posts={posts}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          selectedRole={selectedRole}
-          setSelectedRole={setSelectedRole}
-          uniqueRoles={uniqueRoles}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          filteredUsers={filteredUsers}
-          handleSort={handleSort}
-          setSelectedUser={setSelectedUser}
-          openEditUserModal={openEditUserModal}
-          handleDeleteUser={handleDeleteUser}
-          setShowCreateUserModal={setShowCreateUserModal}
-          getPostCount={getPostCount}
-        />
+        {loading.users || loading.posts ? (
+          <div className="text-gray-500 text-center py-4">
+            Đang tải dữ liệu...
+          </div>
+        ) : (
+          <UserTable
+            users={filteredUsers}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedRole={selectedRole}
+            setSelectedRole={setSelectedRole}
+            uniqueRoles={uniqueRoles}
+            sortKey={sortKey}
+            sortOrder={sortOrder}
+            handleSort={handleSort}
+            openEditUserModal={openEditUserModal}
+            handleDeleteUser={handleDeleteUser}
+            setShowCreateUserModal={setShowCreateUserModal}
+            getPostCount={getPostCount}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+          />
+        )}
       </main>
 
       <CreateUserModal

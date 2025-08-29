@@ -1,72 +1,52 @@
 import React, { useState, useEffect } from "react";
 import Editor from "../../components/Editor"; // Import the Editor component
 import "quill/dist/quill.snow.css";
-import axios from "axios";
 
 function EditPostModal({
   showEditPostModal,
   setShowEditPostModal,
   currentPost,
   handleEditPost,
+  categories,
+  tags,
 }) {
   const [postData, setPostData] = useState({
     title: "",
+    category: "",
     tags: [],
     description: "",
-    category: "",
+    content: "",
   });
-  // eslint-disable-next-line no-unused-vars
-  const [availableTags, setAvailableTags] = useState([
-    "Experience",
-    "Screen",
-    "Marketing",
-    "Life",
-    "Technology",
-    "Business",
-  ]);
-  const [availableCategories, setAvailableCategories] = useState([]);
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/posts");
-        // const tags = [
-        //   ...new Set(res.data.flatMap((post) => post.tags || [])),
-        // ].sort();
-        const categories = [
-          ...new Set(res.data.map((post) => post.category).filter(Boolean)),
-        ].sort();
-        // setAvailableTags(tags);
-        setAvailableCategories(categories);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách tags và categories:", error);
-      }
-    };
-
-    fetchOptions();
-  }, []);
 
   useEffect(() => {
     if (currentPost) {
-      console.log("Current post data:", currentPost);
       setPostData({
         title: currentPost.title || "",
-        tags: currentPost.tags || [],
+        category: currentPost.category?._id || "",
+        tags: currentPost.tags.map((tag) => tag._id || tag) || [],
         description: currentPost.description || "",
-        category: currentPost.category || "",
+        content: currentPost.content || "",
       });
     }
   }, [currentPost]);
 
+  // Close modal on Esc key press
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setShowEditPostModal(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [setShowEditPostModal]);
+
   const handleChange = (e) => {
     const { name, value, checked } = e.target;
     if (name === "tags") {
-      const tag = value;
       setPostData((prev) => {
         if (checked) {
-          return { ...prev, tags: [...prev.tags, tag] };
+          return { ...prev, tags: [...prev.tags, value] };
         } else {
-          return { ...prev, tags: prev.tags.filter((t) => t !== tag) };
+          return { ...prev, tags: prev.tags.filter((t) => t !== value) };
         }
       });
     } else {
@@ -74,8 +54,8 @@ function EditPostModal({
     }
   };
 
-  const onContentChange = (htmlContent) => {
-    setPostData((prev) => ({ ...prev, description: htmlContent }));
+  const handleContentChange = (htmlContent) => {
+    setPostData((prev) => ({ ...prev, content: htmlContent }));
   };
 
   const handleSubmit = (e) => {
@@ -87,76 +67,108 @@ function EditPostModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
-        <h2 className="text-xl font-bold mb-4">Chỉnh sửa bài viết</h2>
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] overflow-y-auto">
+        <h2 className="text-xl font-bold text-purple-700 mb-4">
+          Chỉnh sửa bài viết
+        </h2>
         <form onSubmit={handleSubmit}>
-          <div
-            className="max-h-[70vh] overflow-y-auto"
-            style={{ maxHeight: "70vh" }}
-          >
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Tiêu đề</label>
-              <input
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiêu đề
+              </label>
+              <textarea
                 type="text"
                 name="title"
                 value={postData.title}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                onInput={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 required
+                rows={1}
+                aria-label="Tiêu đề bài viết"
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">
-                Tag (chọn nhiều)
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Danh mục
               </label>
-              <div className="grid grid-cols-2 gap-2 p-2 border rounded h-32 overflow-y-auto">
-                {availableTags.map((tag) => (
-                    <label key={tag} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="tags"
-                        value={tag}
-                        checked={postData.tags.includes(tag)}
-                        onChange={handleChange}
-                      />
-                      <span>{tag}</span>
-                    </label>
-                  ))}
-
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Danh mục</label>
               <select
                 name="category"
                 value={postData.category}
                 onChange={handleChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                aria-label="Chọn danh mục cho bài viết"
               >
-                <option value="">Chọn danh mục</option>
-                {availableCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                <option hidden value="">
+                  --Chọn danh mục--
+                </option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Nội dung</label>
-              <Editor value={postData.description} onChange={onContentChange} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tag (chọn nhiều)
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-md max-h-32 overflow-y-auto bg-gray-50">
+                {tags.map((tag) => (
+                  <label key={tag._id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="tags"
+                      value={tag._id}
+                      checked={postData.tags.includes(tag._id)}
+                      onChange={handleChange}
+                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">{tag.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mô tả
+              </label>
+              <textarea
+                value={postData.description}
+                type="text"
+                name="description"
+                onChange={handleChange}
+                onInput={(e) => {
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nội dung
+              </label>
+              <Editor value={postData.content} onChange={handleContentChange} />
             </div>
           </div>
-          <div className="flex justify-end space-x-4 mt-4">
+          <div className="flex justify-end space-x-4 mt-6">
             <button
               type="button"
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors"
               onClick={() => setShowEditPostModal(false)}
+              aria-label="Hủy chỉnh sửa bài viết"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              aria-label="Lưu bài viết đã chỉnh sửa"
             >
               Lưu
             </button>
