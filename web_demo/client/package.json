@@ -16,6 +16,7 @@
     "@tinymce/tinymce-react": "^6.2.1",
     "aos": "^2.3.4",
     "axios": "^1.10.0",
+    "chartjs": "^0.3.24",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",

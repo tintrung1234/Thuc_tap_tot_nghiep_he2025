@@ -14,6 +14,7 @@ const auditLogSchema = new mongoose.Schema(
         "restore",
         "login",
         "logout",
+        "update_user_by_admin",
       ],
       index: true,
     },

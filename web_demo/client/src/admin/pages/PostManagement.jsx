@@ -2,13 +2,18 @@ import { useState, useEffect, useMemo } from "react";
 import PostTable from "../components/PostTable";
 import DetailPostModal from "../components/DetailPostModal";
 import EditPostModal from "../components/EditPostModal";
-import axios from "axios";
+import { publicApi, privateApi } from "../../api/axios";
 import { toast } from "react-toastify";
-import { getAuth } from "firebase/auth";
 
 function PostManagement() {
   const [posts, setPosts] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState({
+    posts: true,
+    categories: true,
+    tags: true,
+  });
   const [showEditPostModal, setShowEditPostModal] = useState(false);
   const [showDetailPostModal, setShowDetailPostModal] = useState(false);
   const [currentPost, setCurrentPost] = useState(null);
@@ -17,35 +22,48 @@ function PostManagement() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const auth = getAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usersRes = await axios.get("http://localhost:5000/api/users");
-        const formattedUsers = usersRes.data.map((user) => ({
-          uid: user.uid,
-          name: user.username,
-        }));
-        setUsers(formattedUsers);
+        // Fetch posts, categories, and tags in parallel
+        const [postsRes, categoriesRes, tagsRes] = await Promise.all([
+          publicApi.get("/posts"),
+          publicApi.get("/categories?page=1&limit=100"),
+          publicApi.get("/tags?page=1&limit=100"),
+        ]);
 
-        const postsRes = await axios.get("http://localhost:5000/api/posts");
-        const formattedPosts = postsRes.data.map((post) => ({
+        // Format posts
+        const formattedPosts = postsRes.data.posts.map((post) => ({
           id: post._id,
           title: post.title,
-          authorId: post.uid,
-          author:
-            formattedUsers.find((u) => u.uid === post.uid)?.name || "Unknown",
+          slug: post.slug,
+          author: post.uid.username || "Unknown",
           date: new Date(post.createdAt).toISOString().split("T")[0],
           tags: post.tags || [],
           category: post.category || null,
           description: post.description,
-          likes: post.likes || 0,
+          content: post.content,
+          views: post.views || 0,
         }));
         setPosts(formattedPosts);
+        setLoading((prev) => ({ ...prev, posts: false }));
+
+        // Set categories
+        setCategories(categoriesRes.data.categories);
+        setLoading((prev) => ({ ...prev, categories: false }));
+
+        // Set tags
+        setTags(tagsRes.data.tags);
+        setLoading((prev) => ({ ...prev, tags: false }));
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu từ MongoDB:", error);
-        toast.error("Không thể tải danh sách bài viết hoặc người dùng!");
+        console.error("Lỗi khi lấy dữ liệu:", error);
+        toast.error("Không thể tải dữ liệu! Vui lòng thử lại.");
+        setLoading({
+          posts: false,
+          categories: false,
+          tags: false,
+        });
       }
     };
 
@@ -54,41 +72,35 @@ function PostManagement() {
 
   const handleEditPost = async (e, postData) => {
     e.preventDefault();
-    const user = auth.currentUser;
-    const token = await user.getIdToken();
     const updatedPost = {
       title: postData.title,
       description: postData.description,
-      category: postData.category,
-      tags: postData.tags,
+      category: postData.category?._id || postData.category,
+      tags: postData.tags.map((tag) => tag._id || tag),
+      content: postData.content,
     };
     try {
-      const response = await axios.put(
-        `http://localhost:5000/api/posts/update/${currentPost.id}`,
-        updatedPost,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await privateApi.put(
+        `/posts/update/${currentPost.slug}`,
+        updatedPost
       );
       toast.success(response.data.message);
 
       // Refresh posts
-      const postsRes = await axios.get("http://localhost:5000/api/posts");
-      const formattedPosts = postsRes.data.map((post) => ({
+      const postsRes = await publicApi.get("/posts");
+      const formattedPosts = postsRes.data.posts.map((post) => ({
         id: post._id,
         title: post.title,
-        authorId: post.uid,
-        author: users.find((u) => u.uid === post.uid)?.name || "Unknown",
+        slug: post.slug,
+        author: post.uid.username || "Unknown",
         date: new Date(post.createdAt).toISOString().split("T")[0],
         tags: post.tags || [],
         category: post.category || null,
         description: post.description,
-        likes: post.likes || 0,
+        content: post.content,
+        views: post.views || 0,
       }));
       setPosts(formattedPosts);
-
       setShowEditPostModal(false);
     } catch (error) {
       console.error("Lỗi khi cập nhật bài viết:", error);
@@ -96,23 +108,12 @@ function PostManagement() {
     }
   };
 
-  const handleDeletePost = async (id) => {
+  const handleDeletePost = async (slug) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa bài viết này?")) {
       try {
-        const user = auth.currentUser;
-        const token = await user.getIdToken();
-        const response = await axios.delete(
-          `http://localhost:5000/api/posts/delete/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await privateApi.delete(`/posts/${slug}`);
         toast.success(response.data.message);
-
-        // Remove deleted post from state
-        setPosts(posts.filter((p) => p.id !== id));
+        // setPosts(posts.filter((p) => p.slug !== slug));
         setShowDetailPostModal(false);
       } catch (error) {
         console.error("Lỗi khi xóa bài viết:", error);
@@ -136,18 +137,23 @@ function PostManagement() {
     return posts.filter((post) => {
       const matchesSearch = postSearchTerm
         ? post.title.toLowerCase().includes(postSearchTerm.toLowerCase()) ||
-        post.tags.some((tag) =>
-          tag.toLowerCase().includes(postSearchTerm.toLowerCase())
-        )
+          post.tags.some((tag) =>
+            tag.name.toLowerCase().includes(postSearchTerm.toLowerCase())
+          )
         : true;
-      const matchesTag = selectedTag ? post.tags.includes(selectedTag) : true;
+      const matchesTag = selectedTag
+        ? post.tags.some(
+            (tag) => tag._id === selectedTag || tag === selectedTag
+          )
+        : true;
       const matchesCategory = selectedCategory
-        ? post.category === selectedCategory
+        ? post.category?._id === selectedCategory ||
+          post.category === selectedCategory
         : true;
       const matchesDate =
         startDate && endDate
           ? new Date(post.date) >= new Date(startDate) &&
-          new Date(post.date) <= new Date(endDate)
+            new Date(post.date) <= new Date(endDate)
           : true;
       return matchesSearch && matchesTag && matchesCategory && matchesDate;
     });
@@ -160,33 +166,42 @@ function PostManagement() {
     endDate,
   ]);
 
-  const uniqueTags = [...new Set(posts.flatMap((post) => post.tags))].sort();
-  const uniqueCategories = [...new Set(posts.map((post) => post.category))]
-    .filter((category) => category)
-    .sort();
+  const uniqueTags = useMemo(
+    () => [...tags].sort((a, b) => a.name.localeCompare(b.name)),
+    [tags]
+  );
+  const uniqueCategories = useMemo(
+    () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
+    [categories]
+  );
 
   return (
-    <div className="flex-col flex flex-1 overflow-x-auto min-h-screen bg-gray-100 p-4">
+    <div className="flex flex-col flex-1 overflow-x-auto min-h-screen bg-gray-100 p-4">
       <main className="bg-white rounded-lg shadow-md p-6">
-        <PostTable
-          posts={filteredPosts}
-          postSearchTerm={postSearchTerm}
-          setPostSearchTerm={setPostSearchTerm}
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
-          uniqueTags={uniqueTags}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          filteredPosts={filteredPosts}
-          setEndDate={setEndDate}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          uniqueCategories={uniqueCategories}
-          openDetailPostModal={openDetailPostModal}
-          openEditPostModal={openEditPostModal}
-          handleDeletePost={handleDeletePost}
-        />
+        {loading.posts || loading.categories || loading.tags ? (
+          <div className="text-gray-500 text-center py-4">
+            Đang tải dữ liệu...
+          </div>
+        ) : (
+          <PostTable
+            posts={filteredPosts}
+            postSearchTerm={postSearchTerm}
+            setPostSearchTerm={setPostSearchTerm}
+            selectedTag={selectedTag}
+            setSelectedTag={setSelectedTag}
+            uniqueTags={uniqueTags}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            uniqueCategories={uniqueCategories}
+            openDetailPostModal={openDetailPostModal}
+            openEditPostModal={openEditPostModal}
+            handleDeletePost={handleDeletePost}
+          />
+        )}
       </main>
 
       <DetailPostModal
@@ -201,6 +216,8 @@ function PostManagement() {
         setShowEditPostModal={setShowEditPostModal}
         currentPost={currentPost}
         handleEditPost={handleEditPost}
+        categories={categories}
+        tags={tags}
       />
     </div>
   );

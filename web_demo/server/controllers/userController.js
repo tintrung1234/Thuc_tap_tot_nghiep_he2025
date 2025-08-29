@@ -87,10 +87,11 @@ const getRecentUsers = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const { role } = req.query;
+    const { page, limit } = req.query;
     const users = await UserService.getAllUsers({
-      role,
       currentUser: req.user,
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
     res.json(users);
   } catch (error) {
@@ -124,6 +125,32 @@ const restoreUser = async (req, res) => {
   }
 };
 
+const updateUserByAdmin = async (req, res) => {
+  try {
+    const uid = req.params.uid;
+    const updates = req.body;
+
+    const user = await UserService.updateUserByAdmin(uid, updates);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: "User not found or already deleted!" });
+    }
+
+    res.status(200).json({ message: "User updated successfully!", user });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    if (error.message.includes("required")) {
+      return res.status(400).json({ error: error.message });
+    }
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Server error while updating user!" });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -134,4 +161,5 @@ module.exports = {
   softDeleteUser,
   restoreUser,
   changePassword,
+  updateUserByAdmin,
 };
