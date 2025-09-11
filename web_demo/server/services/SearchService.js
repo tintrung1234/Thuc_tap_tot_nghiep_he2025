@@ -1,6 +1,8 @@
 const ChromaModel = require("../models/ChromaModel");
 const OllamaModel = require("../models/OllamaModel");
 
+const URL = process.env.URL_FRONTEND || "http://localhost:3000";
+
 class SearchService {
   constructor() {
     this.embedder = null;
@@ -36,21 +38,20 @@ class SearchService {
     const results = await ChromaModel.query(queryEmbedding, 20);
 
     let answer = "";
-
     if (isQuestion(query)) {
 
       // Prompt cho RAG
       const context = results.documents[0]
-        .map((doc, index) => `Nội dung bài viết ${index + 1}: ${doc}`)
+        .map(doc => `Nội dung bài viết: ${doc}`)
         .join("\n");
 
       const prompt = `Bạn là trợ lý AI cho một blog. Hãy trả lời CHÍNH XÁC dựa trên ngữ cảnh.
                 Nếu không có thông tin trong ngữ cảnh, hãy trả lời: "Tôi không biết từ nội dung blog."
                 ---------------- NGỮ CẢNH ----------------
-                ${context}
+                ${context} 
                 -----------------------------------------
                 Câu hỏi: ${query}
-                Yêu cầu: trả lời ngắn gọn, bằng tiếng Việt, có trích dẫn nguồn (slug/tiêu đề nếu có).`;
+                Yêu cầu: trả lời ngắn gọn, bằng tiếng Việt.`;
 
       // Generation từ LLM
       answer = await OllamaModel.generate(prompt);

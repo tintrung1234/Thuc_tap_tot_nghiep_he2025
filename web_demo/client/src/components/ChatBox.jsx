@@ -27,6 +27,7 @@ export default function ChatBox() {
 
         try {
             const res = await publicApi.post("/search/", { query: input });
+            console.log(res.data)
 
             setMessages([
                 ...newMessages,

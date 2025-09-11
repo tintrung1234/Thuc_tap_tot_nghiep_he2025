@@ -14,6 +14,10 @@ const BlogPost = ({
 }) => {
   const navigate = useNavigate();
 
+  if (!slug && !title && !description) {
+    return null;
+  }
+
   const handleDetailClick = () => {
     navigate(`/detail/${slug}`);
   };
@@ -26,6 +30,17 @@ const BlogPost = ({
     const truncatedText = text.slice(0, maxLength) + "...";
     return `<p>${truncatedText}</p>`;
   };
+
+  const safeTags = Array.isArray(tags)
+    ? tags
+    : (() => {
+      try {
+        return typeof tags === "string" ? JSON.parse(tags) : [];
+      } catch {
+        return [];
+      }
+    })();
+
 
   return (
     <div
@@ -46,7 +61,7 @@ const BlogPost = ({
       <div className="flex-1 sm:ml-4 mt-4 sm:mt-0">
         {/* Category */}
         <span className="text-purple-600 text-sm font-semibold uppercase">
-          {category ? JSON.parse(category).name : "Chưa phân loại"}
+          {category?.name || "Chưa phân loại"}
         </span>
 
         {/* Title */}
@@ -64,18 +79,16 @@ const BlogPost = ({
         </div>
 
         {/* Tags */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {JSON.parse(tags || "[]").map((tagItem) => (
-            <Link
-              key={tagItem._id}
-              to={`/tags/${tagItem.slug}`}
-              className="text-blue-500 text-sm font-medium hover:underline bg-blue-50 px-2 py-1 rounded"
-              onClick={(e) => e.stopPropagation()}
-            >
-              #{tagItem.name}
-            </Link>
-          ))}
-        </div>
+        {safeTags.map((tagItem, index) => (
+          <Link
+            key={tagItem._id || tagItem.slug || index}
+            to={`/tags/${tagItem.slug || tagItem}`}
+            className="text-blue-500 text-sm font-medium hover:underline bg-blue-50 px-2 py-1 rounded"
+            onClick={(e) => e.stopPropagation()}
+          >
+            #{tagItem.name || tagItem}
+          </Link>
+        ))}
 
         {/* Reactions, Comments */}
         <div className="mt-3 flex items-center gap-4 text-gray-500 text-sm">
