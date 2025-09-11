@@ -15,28 +15,27 @@ const SearchResultsPage = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
-  const [categories, setCategories] = useState([]);
-  const [tags, setTags] = useState([]);
   const [ragAnswer, setRagAnswer] = useState("");
   const [relatedChunks, setRelatedChunks] = useState([]);
   const postsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTime, setSearchTime] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch categories
-        const categoriesResponse = await publicApi.get("/categories");
-        setCategories(categoriesResponse.data.categories);
-
-        // Fetch tags
-        const tagsResponse = await publicApi.get("/tags?limit=10");
-        setTags(tagsResponse.data.tags);
-
         // Fetch posts
         const q = searchParams.get("q") || "";
+
+        // Bắt đầu đo thời gian
+        const startTime = performance.now();
+
         const dataResponse = await publicApi.post("/search", { query: q });
+
+        // Kết thúc đo thời gian
+        const endTime = performance.now();
+        setSearchTime(((endTime - startTime) / 1000).toFixed(2)); // giây
 
         const postsData = dataResponse.data.chunks || [];
 
@@ -126,7 +125,7 @@ const SearchResultsPage = () => {
     ...relatedChunks.map((chunk) => ({
       _id: chunk.metadata.post_id,
       title: chunk.metadata.title,
-      slug: chunk.metadata.url.split("/").pop(),
+      slug: chunk.metadata.slug.split("/").pop(),
       description: chunk.content.substring(0, 200) + "...",
       content: chunk.content,
       category: chunk.metadata.category || {},
@@ -170,6 +169,14 @@ const SearchResultsPage = () => {
         Kết quả tìm kiếm cho "{searchQuery || "Tất cả"}"
       </h1>
 
+      {/* Hiển thị số kết quả và thời gian tìm kiếm */}
+      {!loading && (
+        <p className="text-gray-600 mb-6">
+          Tìm thấy <strong>{totalPosts}</strong> kết quả trong{" "}
+          <strong>{searchTime}</strong> giây
+        </p>
+      )}
+
       {/* Display LLM answer if query is a question */}
       {ragAnswer !== "Không có câu trả lời phù hợp." && (
         <div className="mb-8 p-4 bg-gray-100 rounded-lg shadow-md">
@@ -182,7 +189,7 @@ const SearchResultsPage = () => {
 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="col-span-2">
+        <div className="col-span-3">
           {loading ? (
             <BlogSkeleton count={postsPerPage} />
           ) : currentPosts.length > 0 ? (
@@ -211,16 +218,6 @@ const SearchResultsPage = () => {
           ) : (
             <p>Không tìm thấy bài viết nào phù hợp.</p>
           )}
-        </div>
-        <div>
-          <TagsFilter
-            categories={categories}
-            tags={tags}
-            selectedCategory={selectedCategory}
-            selectedTag={selectedTag}
-            onCategoryChange={setSelectedCategory}
-            onTagChange={setSelectedTag}
-          />
         </div>
       </div>
     </main>

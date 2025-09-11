@@ -23,7 +23,7 @@ def upsert_post(
     """Upsert một bài viết vào Chroma"""
     post_id = post.get("post_id")
     title = post.get("title", "")
-    url = post.get("slug", "")
+    slug = post.get("slug", "")
     content = post.get("content", "")
     text_clean = html_to_text(content) if content else ""
 
@@ -55,7 +55,7 @@ def upsert_post(
         meta = {
             "post_id": post_id,
             "title": title,
-            "url": f"/posts/{url}",
+            "slug": slug,
             "chunk_index": idx,
             "char_start": cstart,
             "char_end": cend,
