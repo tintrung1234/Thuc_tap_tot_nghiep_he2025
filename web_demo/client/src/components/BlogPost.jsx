@@ -12,6 +12,7 @@ const BlogPost = ({
   reactions,
   comments,
 }) => {
+  let parsedCategory = typeof category === "string" ? JSON.parse(category) : category;
   const navigate = useNavigate();
 
   if (!slug && !title && !description) {
@@ -61,7 +62,7 @@ const BlogPost = ({
       <div className="flex-1 sm:ml-4 mt-4 sm:mt-0">
         {/* Category */}
         <span className="text-purple-600 text-sm font-semibold uppercase">
-          {category?.name || "Chưa phân loại"}
+          {parsedCategory?.name || "Chưa phân loại"}
         </span>
 
         {/* Title */}
